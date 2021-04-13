@@ -1,0 +1,20 @@
+image_width: 640
+image_height: 480
+camera_name: cameleon3
+camera_matrix:
+  rows: 3
+  cols: 3
+  data: [629.743554, 0.000000, 311.681095, 0.000000, 628.355090, 250.265508, 0, 0, 1]
+distortion_model: plumb_bob
+distortion_coefficients:
+  rows: 1
+  cols: 5
+  data: [0.128905, -0.310996, 0.001762, 0.002042, 0.000000]
+rectification_matrix:
+  rows: 3
+  cols: 3
+  data: [1, 0, 0, 0, 1, 0, 0, 0, 1]
+projection_matrix:
+  rows: 3
+  cols: 4
+  data: [637.884460, 0.000000, 312.542917, 0.000000,  0.000000, 637.273438, 250.819611, 0.000000,  0.000000, 0.000000, 1.000000, 0.000000]
