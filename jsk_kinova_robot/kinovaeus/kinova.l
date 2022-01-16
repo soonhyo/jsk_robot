@@ -51,6 +51,16 @@
   )
 (defmethod gen3_lite_gen3_lite_2f-robot
   (:arm (&rest args) (send* self :rarm args))      ;; enable to call send *kinova* :arm :angle-vector
+  (:angle-vector (&rest args)
+    ;; Display a warning when the dimension of the input vector is greater than the number of joints
+    (let ((vec (if args (car args))))
+      (when (vectorp vec)
+        (when (> (length vec) (length (send self :joint-list)))
+          (warn ";; WARNING : Dimension of input vector: ~A > Dimension of joint-list: ~A~%"
+                (length vec)
+                (length (send self :joint-list))))
+        (send-super* :angle-vector args)))
+    (send-super :angle-vector))
   (:go-grasp (&key (pos 0))
     ;; mimic joint
     ;; https://github.com/Kinovarobotics/ros_kortex/blob/kinetic-devel/kortex_description/grippers/gen3_lite_2f/urdf/gen3_lite_2f_macro.xacro
