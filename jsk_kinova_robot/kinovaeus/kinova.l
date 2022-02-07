@@ -53,6 +53,7 @@
   (:arm (&rest args) (send* self :rarm args))      ;; enable to call send *kinova* :arm :angle-vector
   (:angle-vector (&rest args)
     ;; Display a warning when the dimension of the input vector is greater than the number of joints
+    ;; until https://github.com/euslisp/jskeus/pull/612 is merged.
     (let ((vec (if args (car args))))
       (when (vectorp vec)
         (when (> (length vec) (length (send self :joint-list)))
