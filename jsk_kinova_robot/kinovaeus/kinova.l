@@ -56,10 +56,10 @@
     ;; until https://github.com/euslisp/jskeus/pull/612 is merged.
     (let ((vec (if args (car args))))
       (when (vectorp vec)
-        (when (> (length vec) (length (send self :joint-list)))
+        (when (> (length vec) (calc-target-joint-dimension (send self :joint-list)))
           (warn ";; WARNING : Dimension of input vector: ~A > Dimension of joint-list: ~A~%"
                 (length vec)
-                (length (send self :joint-list))))
+                (calc-target-joint-dimension (send self :joint-list))))
         (send-super* :angle-vector args)))
     (send-super :angle-vector))
   (:go-grasp (&key (pos 0))
