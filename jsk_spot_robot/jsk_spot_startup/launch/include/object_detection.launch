@@ -92,4 +92,19 @@
         timeout_observation: 5.0
     </rosparam>
   </node>
+
+  <!-- multi object tracker -->
+  <node pkg="jsk_perception" type="motpy_bbox_tracker_node.py" name="spot_recognition_motpy_bbox_tracker_node" output="screen">
+      <remap from="~input" to="/soot_recognition/bbox_array" />
+      <remap from="~output/bbox_array" to="/spot_recognition/multi_object_tracker/bbox_array" />
+      <remap from="~output/obj_array" to="/spot_recognition/multi_object_tracker/obj_array" />
+      <rosparam subst_value="true">
+          dt: 0.2
+          target_labels:
+            - person
+            - bicycle
+            - car
+          label_names: $(find jsk_perception)/config/coco_labelnames.yaml
+      </rosparam>
+  </node>
 </launch>
