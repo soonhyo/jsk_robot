@@ -1,6 +1,6 @@
 <launch>
     <arg name="patrol_list" default="['eng2_JSKEntrance', 'eng2_7FElevator']" />
-    <arg name="with_kinova" default="true" />
+    <arg name="with_kinova" default="$(optenv WITH_KINOVA false)" />
     <include
         file="$(find jsk_spot_patrol_and_greeting)/launch/demo.launch"
         >
