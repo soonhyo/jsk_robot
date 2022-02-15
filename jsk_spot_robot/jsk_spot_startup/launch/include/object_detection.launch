@@ -95,7 +95,7 @@
 
   <!-- multi object tracker -->
   <node pkg="jsk_perception" type="motpy_bbox_tracker_node.py" name="spot_recognition_motpy_bbox_tracker_node" output="screen">
-      <remap from="~input" to="/soot_recognition/bbox_array" />
+      <remap from="~input" to="/spot_recognition/bbox_array" />
       <remap from="~output/bbox_array" to="/spot_recognition/multi_object_tracker/bbox_array" />
       <remap from="~output/obj_array" to="/spot_recognition/multi_object_tracker/obj_array" />
       <rosparam subst_value="true">
