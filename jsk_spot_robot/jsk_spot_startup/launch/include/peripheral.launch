@@ -1,7 +1,6 @@
 <launch>
     <arg name="use_insta_360" default="true"/>
     <arg name="use_respeaker" default="true"/>
-    <arg name="use_front_mirophone" default="true"/>
 
     <!-- insta360 -->
     <include
@@ -22,6 +21,7 @@
         pkg="audio_capture"
         type="audio_capture"
         name="audio_capture"
+        output="screen"
         >
         <rosparam subst_value="true">
             bitrate: 128
@@ -36,6 +36,7 @@
         pkg="webrtcvad_ros"
         type="webrtcvad_ros.py"
         name="webrtcvad_ros"
+        output="screen"
         >
         <rosparam>
             aggressiveness: 1
@@ -51,6 +52,7 @@
             pkg="rosserial_python"
             type="serial_node.py"
             name="spot_spinal"
+            output="screen"
             >
             <rosparam>
                 baud: 921600
