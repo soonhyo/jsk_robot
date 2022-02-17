@@ -284,7 +284,8 @@ class SpotRosClient:
 
     def get_laptop_percepntage(self):
         try:
-            msg = rospy.wait_for_message(self.topicname_laptop_percentage, Float32, timeout=rospy.Duration(5))
+            msg = rospy.wait_for_message(
+                self.topicname_laptop_percentage, Float32, timeout=rospy.Duration(5))
             return msg.data
         except rospy.ROSException as e:
             rospy.logwarn('{}'.format(e))
@@ -292,7 +293,8 @@ class SpotRosClient:
 
     def get_battery_percepntage(self):
         try:
-            msg = rospy.wait_for_message(self.topicname_battery_percentage, Float32, timeout=rospy.Duration(5))
+            msg = rospy.wait_for_message(
+                self.topicname_battery_percentage, Float32, timeout=rospy.Duration(5))
             return msg.data
         except rospy.ROSException as e:
             rospy.logwarn('{}'.format(e))
@@ -300,7 +302,8 @@ class SpotRosClient:
 
     def is_connected(self):
         try:
-            msg = rospy.wait_for_message(self.topicname_cable_connected, Bool, timeout=rospy.Duration(5))
+            msg = rospy.wait_for_message(
+                self.topicname_cable_connected, Bool, timeout=rospy.Duration(5))
             return msg.data
         except rospy.ROSException as e:
             rospy.logwarn('{}'.format(e))
@@ -308,7 +311,8 @@ class SpotRosClient:
 
     def is_sitting(self):
         try:
-            msg = rospy.wait_for_message(self.topicname_status_feedback, Feedback, timeout=rospy.Duration(5))
+            msg = rospy.wait_for_message(
+                self.topicname_status_feedback, Feedback, timeout=rospy.Duration(5))
             return msg.sitting
         except rospy.ROSException as e:
             rospy.logwarn('{}'.format(e))
@@ -316,7 +320,8 @@ class SpotRosClient:
 
     def is_standing(self):
         try:
-            msg = rospy.wait_for_message(self.topicname_status_feedback, Feedback, timeout=rospy.Duration(5))
+            msg = rospy.wait_for_message(
+                self.topicname_status_feedback, Feedback, timeout=rospy.Duration(5))
             return msg.standing
         except rospy.ROSException as e:
             rospy.logwarn('{}'.format(e))
@@ -324,7 +329,8 @@ class SpotRosClient:
 
     def is_powered_on(self):
         try:
-            msg = rospy.wait_for_message(self.topicname_status_power_state, PowerState, timeout=rospy.Duration(5))
+            msg = rospy.wait_for_message(
+                self.topicname_status_power_state, PowerState, timeout=rospy.Duration(5))
             if msg.motor_power_state == PowerState.STATE_ON:
                 return True
             else:
@@ -469,7 +475,8 @@ class SpotRosClient:
 
     def get_current_node(self):
         try:
-            msg = rospy.wait_for_message(self.topicname_current_node_id, String, timeout=rospy.Duration(5))
+            msg = rospy.wait_for_message(
+                self.topicname_current_node_id, String, timeout=rospy.Duration(5))
             return msg.data
         except rospy.ROSException as e:
             rospy.logwarn('{}'.format(e))
