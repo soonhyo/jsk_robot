@@ -497,7 +497,7 @@ class SpotRosClient:
     # \param x y value of the target position [m]
     # \param theta theta value of the target position [rad]
     # \param duration duration of trajectory command [secs]
-    def trajectory(self, x, y, theta, duration, blocking=False):
+    def trajectory(self, x, y, theta, duration=None, blocking=False):
         rotation = PyKDL.Rotation.RotZ(theta)
         goal = TrajectoryGoal()
         goal.target_pose.header.frame_id = 'body'
@@ -507,7 +507,10 @@ class SpotRosClient:
         goal.target_pose.pose.orientation.y = rotation.GetQuaternion()[1]
         goal.target_pose.pose.orientation.z = rotation.GetQuaternion()[2]
         goal.target_pose.pose.orientation.w = rotation.GetQuaternion()[3]
-        goal.duration.data = rospy.Duration(duration)
+        if duration is None:
+            goal.duration.data = rospy.Duration(math.sqrt(x**2 + y**2)*10)
+        else:
+            goal.duration.data = rospy.Duration(duration)
         self._actionclient_trajectory.send_goal(goal)
         if blocking:
             self._actionclient_trajectory.wait_for_result()
