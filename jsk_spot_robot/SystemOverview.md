@@ -9,6 +9,7 @@ TODO
 ## Systemd services
 
 Currently, there are systemd service below.
+Services configurations are placed under `/etc/systemd/system`.
 Each service will load `/var/lib/robot/config.bash` for robot-specific settings before launching.
 
 - ros related services

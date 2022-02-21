@@ -10,7 +10,7 @@ jsk_spot_robot
 
 To setup a new internal PC and spot user, Please see [this page](./SetupInternalPCAndSpotUser.md).
 
-### How to set up a catkin workspace for a remove PC
+### How to set up a catkin workspace for a remote PC
 
 Create a workspace
 
@@ -86,7 +86,18 @@ TODO
 
 #### rwt_app_chooser
 
-TODO
+Add the spot robot:
+1. Access [http://tork-a.github.io/visualization_rwt/rwt_app_chooser](http://tork-a.github.io/visualization_rwt/rwt_app_chooser "website").
+1. Click `ADD A ROBOT` button
+1. Select `Spot` at `Robot type`
+1. Type `StrelKa` at `Robot name`
+1. Type `ws://strelka.local:9090/` at `Robot URI`
+1. Click `ADD ROBOT` button
+
+Execute demos:
+1. Click `StrelKa` at `Select Robot` window
+1. Select task which are shown with icons.
+
 
 ### VNC Server
 
@@ -95,6 +106,17 @@ Ports are below.
 
 - Belka: 5100
 - Strelka: 21000
+
+### Logging
+
+Systemd service logs can be seen with the following command.
+```bash
+journalctl -u <service-name> -f
+```
+For example:
+```bash
+journalctl -u jsk-spot-ros-app-manager.service -f
+```
 
 ### Development with a remote PC
 
