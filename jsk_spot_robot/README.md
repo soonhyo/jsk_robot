@@ -91,7 +91,7 @@ Add the spot robot:
 1. Click `ADD A ROBOT` button
 1. Select `Spot` at `Robot type`
 1. Type `StrelKa` at `Robot name`
-1. Type `ws://strelka.local:9090/` at `Robot URI`
+1. Type `ws://strelka.jsk.imi.i.u-tokyo.ac.jp:9090/` at `Robot URI`
 1. Click `ADD ROBOT` button
 
 Execute demos:
