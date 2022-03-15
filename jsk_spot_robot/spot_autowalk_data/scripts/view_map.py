@@ -254,6 +254,10 @@ def load_map(path):
                 current_waypoint_snapshots[waypoint_snapshot.id] = waypoint_snapshot
         # Similarly, edges have snapshot data.
         for edge in current_graph.edges:
+
+            if not edge.snapshot_id:
+                continue # Rare case that snapshot id is empty
+
             file_name = os.path.join(path, "edge_snapshots", edge.snapshot_id)
             if not os.path.exists(file_name):
                 continue
