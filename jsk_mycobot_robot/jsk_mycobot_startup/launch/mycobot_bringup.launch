@@ -1,13 +1,38 @@
 <launch>
-  <arg name="port" default="/dev/ttyUSB0" doc ="the serial port for connection" />
+  <arg name="port" default="/dev/mycobot" doc ="the serial port for connection" />
   <arg name="baud" default="115200" doc ="the serial baudrate" />
   <arg name="rviz" default="false" doc="Set true if you want RViz." />
+  <arg name="hsi" default="true" doc="Set true if you want to use hsi filter." />
   <arg name="moveit" default="false" doc="Set true if you want Moveit-based plan." />
+  <arg name="realsense2" default="true" doc="Set true if you use realsense2 depth camera"/>
+  <arg name="mycobot_debug" default="false" doc="Set true if you want to check mycobot comm and others"/>
+
+  <!-- for realsense2 -->
+  <arg name="camera"         default="camera"/>
+  <arg name="rgb_processing"                  default="true"/>
+  <arg name="ir_processing"                   default="true"/>
+  <arg name="depth_registration"              default="true"/>
+  <arg name="depth_processing"                default="true"/>
+  <arg name="depth_registered_processing"     default="true"/>
+  <arg name="disparity_processing"            default="true"/>
+  <arg name="disparity_registered_processing" default="true"/>
+  <arg name="hw_registered_processing"        default="true"/>
+  <arg name="sw_registered_processing"        default="true"/>
+  <arg name="color_width"         default="640"/><!-- 1920 -->
+  <arg name="color_height"        default="480"/><!-- 1080 -->
+  <arg name="color_fps"        default="30"/>
+  <arg name="depth_width"         default="848"/> <!-- 1280 -->
+  <arg name="depth_height"        default="480"/> <!-- 720 -->
+  <arg name="depth_fps"        default="30"/>
+  <arg name="align_depth" default="true"/>
+  <!-- for hsi  -->
+  <arg name="in_points"         default="/camera/depth_registered/points"/>
 
   <!-- Driver -->
   <include file="$(find mycobot_communication)/launch/mycobot_interface.launch" >
     <arg name="port" value="$(arg port)" />
     <arg name="baud" value="$(arg baud)" />
+    <arg name="debug" value="$(arg mycobot_debug)" />
   </include>
 
   <!-- Moveit -->
@@ -15,6 +40,33 @@
     <arg name="info" value="true" />
   </include>
 
+  <!-- realsense2 -->
+  <include if="$(arg realsense2)" file="$(find realsense2_camera)/launch/rs_rgbd.launch">
+    <arg name="camera" value="$(arg camera)"/>
+    <arg name="align_depth" value="$(arg align_depth)"/>
+    <arg name="color_width" value="$(arg color_width)"/>
+    <arg name="color_height" value="$(arg color_height)"/>
+    <arg name="color_fps"    value="$(arg color_fps)"/>
+    <arg name="depth_width"  value="$(arg depth_width)"/>
+    <arg name="depth_height" value="$(arg depth_height)"/>
+    <arg name="depth_fps"    value="$(arg depth_fps)"/>
+  </include>
+
   <!-- Rviz -->
   <include if="$(arg rviz)" file="$(find jsk_mycobot_startup)/launch/rviz.launch" />
+
+  <!-- hsi filter -->
+  <include if="$(arg hsi)" file="$(find jsk_pcl_ros)/launch/hsi_color_filter.launch">
+    <arg name="DEFAULT_NAMESPACE" value="hsi_color_filter"/>
+    <arg name="INPUT" value="$(arg in_points)"/>
+    <arg name="h_max" default="-87" /><!-- blue -->
+    <arg name="h_min" default="-100" />
+    <arg name="s_max" default="111" />
+    <arg name="s_min" default="78" />
+    <arg name="i_max" default="114" />
+    <arg name="i_min" default="95" />
+  </include>
+
+  <!-- tf broadcaster -->
+  <!-- <node type="tf_broadcaster" pkg="jsk_mycobot_startup" name="tf_mycobot_broadcaster"/> -->
 </launch>
