@@ -1,0 +1,197 @@
+#!/usr/bin/env roseus
+(load "package://mycoboteus/mycobot-interface.l")
+
+(ros::roseus-add-msgs "sensor_msgs")
+
+(defun get-joy (msg)
+  (setq *joy-com* (send msg :axes))
+  (setq *joy-buttons* (send msg :buttons))
+  (print *joy-buttons*)
+  (print *joy-com*)
+  )
+
+(defun joystick-init ()
+  (ros::subscribe "/joy"
+                  sensor_msgs::Joy
+                  #'teleop-joy-cb)
+  )
+(defun joint-pos-pub(target-coords)
+  (setq *end-pose* (send *robot* :rarm :end-coords :copy-worldcoords))
+  (send *end-pose* :translate target-coords :world)
+
+  (send *robot* :rarm :inverse-kinematics *end-pose*)
+  (send *irtviewer* :draw-objects)
+  (send *joint_command_msg* :name (send *robot* :joint-list :name))
+  (send *joint_command_msg* :position (send *robot* :angle-vector))
+  (print (send *robot* :angle-vector))
+  ;; (send *joint_command_msg* :velocity )
+  (ros::publish "/joint_command" *joint_command_msg*)
+  )
+
+(defun joint-ori-pub(p)
+  (let (resolution resolution-minus)
+    (setq *end-pose* (send *robot* :rarm :end-coords :copy-worldcoords))
+    (setq resolution (/ pi 30))
+    (setq resolution-minus (/ -pi 30))
+    (cond
+      ((= p 0)
+       (send *end-pose* :rotate resolution :x :world)
+       )
+      ((= p 1)
+       (send *end-pose* :rotate resolution-minus :x :world)
+       )
+      ((= p 2)
+       (send *end-pose* :rotate resolution :y :world)
+       )
+      ((= p 3)
+       (send *end-pose* :rotate resolution-minus :y :world)
+       )
+      ((= p 4)
+       (send *end-pose* :rotate resolution :z :world)
+       )
+      ((= p 5)
+       (send *end-pose* :rotate resolution-minus :z :world)
+       )
+      )
+
+    (send *robot* :rarm :inverse-kinematics *end-pose*)
+    (send *irtviewer* :draw-objects)
+    (send *joint_command_msg* :name (send *robot* :joint-list :name))
+    (send *joint_command_msg* :position (send *robot* :angle-vector))
+    (print (send *robot* :angle-vector))
+    ;; (send *joint_command_msg* :velocity )
+    (ros::publish "/joint_command" *joint_command_msg*)
+    )
+  )
+(defun grasp-on()
+  (send *ri* :start-grasp)
+  )
+(defun grasp-off()
+  (send *ri* :stop-grasp)
+  )
+(defun servo-on()
+  (send *robot* :rarm :angle-vector (send *ri* :state :potentio-vector))
+  (send *irtviewer* :draw-objects)
+  (send *ri* :servo-on)
+  )
+(defun servo-off()
+  (send *ri* :servo-off)
+  )
+
+(defun teleop-joy-cb(msg)
+  ;; mode callback
+  (let* ((axes (send msg :axes))
+         (Lstick (coerce (subseq axes 0 2) float-vector))
+         (Rstick (coerce (subseq axes 3 5) float-vector))
+         (buttons (send msg :buttons))
+         (move-unit)
+         (share (elt buttons 8))
+         (options (elt buttons 9))
+         (L1 (elt buttons 4))
+         (R1 (elt buttons 5))
+         (right/left       (elt Lstick 0))
+         (forward/backward (elt Lstick 1))
+         (up/down          (elt Rstick 1))
+
+         (cross (elt buttons 0))
+         (circle (elt buttons 1))
+         (triangle (elt buttons 2))
+         (square (elt buttons 3))
+
+         ;; (right    (elt buttons  )) ;; roll+
+         ;; (left     (elt buttons  7)) ;; roll-
+         ;; (triangle (elt buttons 12)) ;; pitch+
+         ;; (cross    (elt buttons 14)) ;; pitch-
+         ;; (square   (elt buttons 15)) ;; yaw+
+         ;; (circle   (elt buttons 13)) ;; yaw-
+
+         ;; (roll  (* *max-rot* (- right left)))
+         ;; (pitch (* *max-rot* (- triangle cross)))
+         ;; (yaw   (* *max-rot* (- square circle)))
+
+         ;; (up       (elt buttons  4)) ;; grasp
+         ;; (down     (elt buttons  6)) ;; release
+
+         ;; arm pos
+         ;; target-coords)
+         )
+    (setq move-unit 5)
+    (setq move-unit-minus -5)
+
+    ;; (setq *end-pose* (send *robot* :rarm :end-coords :copy-worldcoords))
+    (cond
+      ((= L1 1)
+       (when (> forward/backward 0.05)
+         (joint-pos-pub (float-vector move-unit 0 0)))
+       (when (< forward/backward -0.05)
+         (joint-pos-pub (float-vector move-unit-minus 0 0)))
+       (when (> right/left 0.05)
+         (joint-pos-pub (float-vector 0 move-unit 0)))
+       (when (< right/left -0.05)
+         (joint-pos-pub (float-vector 0 move-unit-minus 0)))
+       (when (> up/down 0.05)
+         (joint-pos-pub (float-vector 0 0 move-unit)))
+       (when (< up/down -0.05)
+         (joint-pos-pub (float-vector 0 0 move-unit-minus)))
+       )
+      ((= R1 1)
+       (when (> forward/backward 0.05)
+         (joint-ori-pub 0))
+       (when (< forward/backward -0.05)
+         (joint-ori-pub 1))
+       (when (> right/left 0.05)
+         (joint-ori-pub 2))
+       (when (< right/left -0.05)
+         (joint-ori-pub 3))
+       (when (> up/down 0.05)
+         (joint-ori-pub 4))
+       (when (< up/down -0.05)
+         (joint-ori-pub 5))
+       )
+      ((= circle 1)
+       (grasp-on)
+       )
+      ((= cross 1)
+       (grasp-off)
+       )
+      ((= triangle 1)
+       (servo-on)
+       )
+      ((= square 1)
+       (servo-off)
+       )
+
+      )
+    ;; (print *end-pose*)
+
+    ;; (send *ri* :angle-vector (send *robot* :rarm :angle-vector))
+    ;; (send *ri* :wait-interporation)
+    )
+  )
+
+;; mycobot init
+(mycobot-init)
+;; (send *robot* :angle-vector (send *ri* :state :potentio-vector))
+;; (send *irtviewer* :draw-objects)
+
+;; variables
+(setq *joy-axes* nil)
+(setq *joy-buttons* nil)
+(setq *end-pose* nil)
+(setq *joint_command_msg* (instance sensor_msgs::JointState :init))
+
+;; start teleop node
+(joystick-init)
+
+
+;; (defun arm-move())
+
+(ros::roseus "teleop_node")
+(ros::rate 5)
+(ros::advertise "/joint_command" sensor_msgs::JointState 1)
+(while (ros::ok)
+  (ros::spin-once)
+  (ros::sleep)
+  )
+
+(exit)

@@ -28,7 +28,7 @@ Panels:
   - Class: rviz/Time
     Name: Time
     SyncMode: 0
-    SyncSource: PointCloud2
+    SyncSource: ""
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -64,54 +64,6 @@ Visualization Manager:
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        camera_bottom_screw_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        camera_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        end_effector:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        joint1:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        joint2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        joint3:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        joint4:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        joint5:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        joint6:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        joint6_flange:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
       Name: RobotModel
       Robot Description: robot_description
       TF Prefix: ""
@@ -123,36 +75,6 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: true
-        camera_aligned_depth_to_color_frame:
-          Value: true
-        camera_bottom_screw_frame:
-          Value: true
-        camera_color_frame:
-          Value: true
-        camera_color_optical_frame:
-          Value: true
-        camera_depth_frame:
-          Value: true
-        camera_depth_optical_frame:
-          Value: true
-        camera_link:
-          Value: true
-        end_effector:
-          Value: true
-        joint1:
-          Value: true
-        joint2:
-          Value: true
-        joint3:
-          Value: true
-        joint4:
-          Value: true
-        joint5:
-          Value: true
-        joint6:
-          Value: true
-        joint6_flange:
-          Value: true
       Marker Alpha: 1
       Marker Scale: 0.4000000059604645
       Name: TF
@@ -160,25 +82,7 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        joint1:
-          camera_bottom_screw_frame:
-            camera_link:
-              camera_aligned_depth_to_color_frame:
-                camera_color_optical_frame:
-                  {}
-              camera_color_frame:
-                {}
-              camera_depth_frame:
-                camera_depth_optical_frame:
-                  {}
-          joint2:
-            joint3:
-              joint4:
-                joint5:
-                  joint6:
-                    joint6_flange:
-                      end_effector:
-                        {}
+        {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -280,54 +184,6 @@ Visualization Manager:
           Expand Link Details: false
           Expand Tree: false
           Link Tree Style: Links in Alphabetic Order
-          camera_bottom_screw_frame:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-          camera_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          end_effector:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-          joint1:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          joint2:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          joint3:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          joint4:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          joint5:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          joint6:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          joint6_flange:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
         Loop Animation: false
         Robot Alpha: 0.5
         Robot Color: 150; 50; 150
@@ -374,54 +230,6 @@ Visualization Manager:
           Expand Link Details: false
           Expand Tree: false
           Link Tree Style: Links in Alphabetic Order
-          camera_bottom_screw_frame:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-          camera_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          end_effector:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-          joint1:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          joint2:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          joint3:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          joint4:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          joint5:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          joint6:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          joint6_flange:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
         Robot Alpha: 1
         Show Robot Collision: false
         Show Robot Visual: false
@@ -439,7 +247,7 @@ Visualization Manager:
   Global Options:
     Background Color: 48; 48; 48
     Default Light: true
-    Fixed Frame: joint1
+    Fixed Frame: link1
     Frame Rate: 30
   Name: root
   Tools:
@@ -506,4 +314,4 @@ Window Geometry:
     collapsed: false
   Width: 1920
   X: 640
-  Y: 358
+  Y: 321

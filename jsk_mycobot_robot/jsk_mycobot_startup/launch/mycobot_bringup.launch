@@ -67,6 +67,13 @@
     <arg name="i_min" default="95" />
   </include>
 
+  <!-- joystick -->
+  <node name="joy" type="joy_node" pkg="joy">
+    <arg name="coalesce_interval" default="0.1" />
+    <arg name="autorepeat_rate" default="20" />
+
+  </node>
+    
   <!-- tf broadcaster -->
   <!-- <node type="tf_broadcaster" pkg="jsk_mycobot_startup" name="tf_mycobot_broadcaster"/> -->
 </launch>
