@@ -5,8 +5,10 @@
   <arg name="hsi" default="true" doc="Set true if you want to use hsi filter." />
   <arg name="moveit" default="false" doc="Set true if you want Moveit-based plan." />
   <arg name="realsense2" default="true" doc="Set true if you use realsense2 depth camera"/>
+  <arg name="openni" default="false" doc="Set true if you use openni depth camera"/>
   <arg name="mycobot_debug" default="false" doc="Set true if you want to check mycobot comm and others"/>
   <arg name="joy" default="true" doc="Set true if you want to use joystick"/>
+  <arg name="hair_flow_detect" default="true" doc="Set true if you want to detect hair flow"/>
 
   <!-- for realsense2 -->
   <arg name="camera"         default="camera"/>
@@ -31,6 +33,9 @@
   <!-- for joystick -->
   <arg name="interval"         default="0.2"/>
   <arg name="autorate"         default="3"/>
+  <!-- for hair flow detect-->
+  <arg name="input_image"         default="/camera/color/image_rect_color"/>
+  <arg name="input_points"         default="/camera/depth_registered/points"/>
 
   <!-- Driver -->
   <include file="$(find mycobot_communication)/launch/mycobot_interface.launch" >
@@ -56,9 +61,6 @@
     <arg name="depth_fps"    value="$(arg depth_fps)"/>
   </include>
 
-  <!-- Rviz -->
-  <include if="$(arg rviz)" file="$(find jsk_mycobot_startup)/launch/rviz.launch" />
-
   <!-- hsi filter -->
   <include if="$(arg hsi)" file="$(find jsk_pcl_ros)/launch/hsi_color_filter.launch">
     <arg name="DEFAULT_NAMESPACE" value="hsi_color_filter"/>
@@ -71,10 +73,22 @@
     <arg name="i_min" default="95" />
   </include>
 
+  <include if="$(arg hair_flow_detect)" file="$(find hair_flow_detect)/launch/hair_flow_detect.launch">
+    <arg name="openni" default="$(arg openni)" />
+    <arg name="gui" default="false" />
+    <arg name="input_image" default="$(arg input_image)" />
+    <arg name="input_points" default="$(arg input_points)" />
+  </include>
+
   <!-- joystick -->
   <node if="$(arg joy)" name="joy" type="joy_node" pkg="joy" args="_coalesce_interval:=$(arg interval) _autorepeat_rate:=$(arg autorate)"/>
   <node if="$(arg joy)" name="joy_roseus" type="mycobot-joystick.l" pkg="mycoboteus"/>
 
   <!-- tf broadcaster -->
   <!-- <node type="tf_broadcaster" pkg="jsk_mycobot_startup" name="tf_mycobot_broadcaster"/> -->
+
+  <!-- Rviz -->
+  <include if="$(arg rviz)" file="$(find jsk_mycobot_startup)/launch/rviz.launch" />
+
+
 </launch>
