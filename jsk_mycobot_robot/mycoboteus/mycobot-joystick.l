@@ -107,11 +107,16 @@
          (Rstick (coerce (subseq axes 3 5) float-vector))
          (buttons (send msg :buttons))
          (move-unit)
+         (move-unit-minus)
+         (rotate-unit)
+         (rotate-unit-minus)
+         (boost)
          (share (elt buttons 8))
          (options (elt buttons 9))
          (home (elt buttons 10))
 
          (L1 (elt buttons 4))
+         (L2 (elt buttons 6))
          (R1 (elt buttons 5))
          (right/left       (elt Lstick 0))
          (forward/backward (elt Lstick 1))
@@ -122,30 +127,18 @@
          (circle (elt buttons 1))
          (triangle (elt buttons 2))
          (square (elt buttons 3))
-
-         ;; (right    (elt buttons  )) ;; roll+
-         ;; (left     (elt buttons  7)) ;; roll-
-         ;; (triangle (elt buttons 12)) ;; pitch+
-         ;; (cross    (elt buttons 14)) ;; pitch-
-         ;; (square   (elt buttons 15)) ;; yaw+
-         ;; (circle   (elt buttons 13)) ;; yaw-
-
-         ;; (roll  (* *max-rot* (- right left)))
-         ;; (pitch (* *max-rot* (- triangle cross)))
-         ;; (yaw   (* *max-rot* (- square circle)))
-
-         ;; (up       (elt buttons  4)) ;; grasp
-         ;; (down     (elt buttons  6)) ;; release
-
-         ;; arm pos
-         ;; target-coords)
          )
     (setq move-unit 5)
-    (setq move-unit-minus -5)
-
+    (setq move-unit-minus (* -1 move-unit))
+    (setq rotate-unit 0.05)
+    (setq rotate-unit-minus (* -1 rotate-unit))
+    (setq boost 1.5)
     ;; (setq *end-pose* (send *robot* :rarm :end-coords :copy-worldcoords))
     (cond
       ((= L1 1)
+       (when (= L2 1) ;;boost movement
+         (setq move-unit (* move-unit boost))
+         (setq move-unit-minus (* move-unit-minus boost)))
        (when (> forward/backward 0.05)
          (joint-pos-pub (float-vector move-unit 0 0)))
        (when (< forward/backward -0.05)
@@ -160,17 +153,20 @@
          (joint-pos-pub (float-vector 0 0 move-unit-minus)))
        )
       ((= R1 1)
-       (when (> forward/backward 0.05)
+       (when (= L2 1) ;;boost
+         (setq rotate-unit (* rotate-unit boost))
+         (setq rotate-unit-minus (* rotate-unit-minus boost)))
+       (when (> forward/backward rotate-unit)
          (joint-ori-pub 0))
-       (when (< forward/backward -0.05)
+       (when (< forward/backward rotate-unit-minus)
          (joint-ori-pub 1))
-       (when (> right/left 0.05)
+       (when (> right/left rotate-unit)
          (joint-ori-pub 2))
-       (when (< right/left -0.05)
+       (when (< right/left rotate-unit-minus)
          (joint-ori-pub 3))
-       (when (> yaw 0.05)
+       (when (> yaw rotate-unit)
          (joint-ori-pub 4))
-       (when (< yaw -0.05)
+       (when (< yaw rotate-unit-minus)
          (joint-ori-pub 5))
        )
       ((= circle 1)
@@ -194,7 +190,6 @@
       ((= home 1)
        (go-save-pose)
        )
-
       )
     ;; (print *end-pose*)
 
@@ -234,7 +229,7 @@
 ;; (defun arm-move())
 
 (ros::roseus "teleop_node")
-(ros::rate 20)
+(ros::rate 10)
 (ros::advertise "/joint_command" sensor_msgs::JointState 1)
 (while (ros::ok)
   (ros::spin-once)
