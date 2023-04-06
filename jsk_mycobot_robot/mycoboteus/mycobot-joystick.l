@@ -20,6 +20,7 @@
   (send *end-pose* :translate target-coords :world)
 
   (send *robot* :rarm :inverse-kinematics *end-pose*)
+  (setq ((send *irtviewer* :viewer) . geo::eye) *v*)
   (send *irtviewer* :draw-objects)
   (send *joint_command_msg* :name (send *robot* :joint-list :name))
   (send *joint_command_msg* :position (send *robot* :angle-vector))
@@ -55,6 +56,7 @@
       )
 
     (send *robot* :rarm :inverse-kinematics *end-pose*)
+    (setq ((send *irtviewer* :viewer) . geo::eye) *v*)
     (send *irtviewer* :draw-objects)
     (send *joint_command_msg* :name (send *robot* :joint-list :name))
     (send *joint_command_msg* :position (send *robot* :angle-vector))
@@ -77,6 +79,19 @@
 (defun servo-off()
   (send *ri* :servo-off)
   )
+(defun init-pose()
+  (send *robot* :reset-pose)
+  (send *irtviewer* :draw-objects)
+  (send *ri* :angle-vector (send *robot* :rarm :angle-vector) 2000)
+  )
+(defun save-pose()
+  (setq *save-angles* (send *robot* :rarm :angle-vector))
+  )
+(defun go-save-pose()
+  (send *robot* :rarm :angle-vector *save-angles*)
+  (send *irtviewer* :draw-objects)
+  (send *ri* :angle-vector (send *robot* :rarm :angle-vector) 2000)
+  )
 
 (defun teleop-joy-cb(msg)
   ;; mode callback
@@ -87,6 +102,8 @@
          (move-unit)
          (share (elt buttons 8))
          (options (elt buttons 9))
+         (home (elt buttons 10))
+
          (L1 (elt buttons 4))
          (R1 (elt buttons 5))
          (right/left       (elt Lstick 0))
@@ -160,6 +177,15 @@
       ((= square 1)
        (servo-off)
        )
+      ((= options 1)
+       (init-pose)
+       )
+      ((= share 1)
+       (save-pose)
+       )
+      ((= home 1)
+       (go-save-pose)
+       )
 
       )
     ;; (print *end-pose*)
@@ -179,6 +205,18 @@
 (setq *joy-buttons* nil)
 (setq *end-pose* nil)
 (setq *joint_command_msg* (instance sensor_msgs::JointState :init))
+(setq *save-angles* nil)
+
+;;viewer
+(setq vp #f(-958.862 794.316 860.356)
+      vt #f(11.3147 -19.7581 215.055)
+      lra 140
+      uda 27)
+(send *irtviewer* :viewpoint vp)
+(send *irtviewer* :look1 vt lra uda)
+(send *irtviewer* :draw-objects)
+
+(setq *v* (copy-object (send *irtviewer* :viewer :viewing)))
 
 ;; start teleop node
 (joystick-init)
