@@ -8,6 +8,7 @@
   <arg name="openni" default="false" doc="Set true if you use openni depth camera"/>
   <arg name="mycobot_debug" default="false" doc="Set true if you want to check mycobot comm and others"/>
   <arg name="joy" default="true" doc="Set true if you want to use joystick"/>
+  <arg name="joyeus" default="true" doc="Set true if you want to use joystick for control the mycobot"/>
   <arg name="hair_flow_detect" default="true" doc="Set true if you want to detect hair flow"/>
 
   <!-- for realsense2 -->
@@ -82,7 +83,7 @@
 
   <!-- joystick -->
   <node if="$(arg joy)" name="joy" type="joy_node" pkg="joy" args="_coalesce_interval:=$(arg interval) _autorepeat_rate:=$(arg autorate)"/>
-  <node if="$(arg joy)" name="joy_roseus" type="mycobot-joystick.l" pkg="mycoboteus"/>
+  <node if="$(arg joyeus)" name="joy_roseus" type="mycobot-joystick.l" pkg="mycoboteus"/>
 
   <!-- tf broadcaster -->
   <!-- <node type="tf_broadcaster" pkg="jsk_mycobot_startup" name="tf_mycobot_broadcaster"/> -->
