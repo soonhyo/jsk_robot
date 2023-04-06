@@ -6,6 +6,7 @@
   <arg name="moveit" default="false" doc="Set true if you want Moveit-based plan." />
   <arg name="realsense2" default="true" doc="Set true if you use realsense2 depth camera"/>
   <arg name="mycobot_debug" default="false" doc="Set true if you want to check mycobot comm and others"/>
+  <arg name="joy" default="true" doc="Set true if you want to use joystick"/>
 
   <!-- for realsense2 -->
   <arg name="camera"         default="camera"/>
@@ -27,6 +28,9 @@
   <arg name="align_depth" default="true"/>
   <!-- for hsi  -->
   <arg name="in_points"         default="/camera/depth_registered/points"/>
+  <!-- for joystick -->
+  <arg name="interval"         default="0.2"/>
+  <arg name="autorate"         default="3"/>
 
   <!-- Driver -->
   <include file="$(find mycobot_communication)/launch/mycobot_interface.launch" >
@@ -68,12 +72,9 @@
   </include>
 
   <!-- joystick -->
-  <node name="joy" type="joy_node" pkg="joy">
-    <arg name="coalesce_interval" default="0.1" />
-    <arg name="autorepeat_rate" default="20" />
+  <node if="$(arg joy)" name="joy" type="joy_node" pkg="joy" args="_coalesce_interval:=$(arg interval) _autorepeat_rate:=$(arg autorate)"/>
+  <node if="$(arg joy)" name="joy_roseus" type="mycobot-joystick.l" pkg="mycoboteus"/>
 
-  </node>
-    
   <!-- tf broadcaster -->
   <!-- <node type="tf_broadcaster" pkg="jsk_mycobot_startup" name="tf_mycobot_broadcaster"/> -->
 </launch>
