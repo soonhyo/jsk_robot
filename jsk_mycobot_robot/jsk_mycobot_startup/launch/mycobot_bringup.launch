@@ -10,6 +10,7 @@
   <arg name="joy" default="true" doc="Set true if you want to use joystick"/>
   <arg name="joyeus" default="true" doc="Set true if you want to use joystick for control the mycobot"/>
   <arg name="hair_flow_detect" default="true" doc="Set true if you want to detect hair flow"/>
+  <arg name="hair_flow_open3d_viz" default="false" doc="Set true if you want to visualize the hair flow path on opend3d viewer"/>
 
   <!-- for realsense2 -->
   <arg name="camera"         default="camera"/>
@@ -66,12 +67,12 @@
   <include if="$(arg hsi)" file="$(find jsk_pcl_ros)/launch/hsi_color_filter.launch">
     <arg name="DEFAULT_NAMESPACE" value="hsi_color_filter"/>
     <arg name="INPUT" value="$(arg in_points)"/>
-    <arg name="h_max" default="-87" /><!-- blue -->
-    <arg name="h_min" default="-100" />
-    <arg name="s_max" default="111" />
-    <arg name="s_min" default="78" />
-    <arg name="i_max" default="114" />
-    <arg name="i_min" default="95" />
+    <arg name="h_max" default="-82" /><!-- blue -->
+    <arg name="h_min" default="-106" />
+    <arg name="s_max" default="205" />
+    <arg name="s_min" default="158" />
+    <arg name="i_max" default="100" />
+    <arg name="i_min" default="26" />
   </include>
 
   <include if="$(arg hair_flow_detect)" file="$(find hair_flow_detect)/launch/hair_flow_detect.launch">
@@ -79,11 +80,13 @@
     <arg name="gui" default="false" />
     <arg name="input_image" default="$(arg input_image)" />
     <arg name="input_points" default="$(arg input_points)" />
+    <arg name="open3d_viz" default="$(arg hair_flow_open3d_viz)" />
   </include>
 
   <!-- joystick -->
   <node if="$(arg joy)" name="joy" type="joy_node" pkg="joy" args="_coalesce_interval:=$(arg interval) _autorepeat_rate:=$(arg autorate)"/>
   <node if="$(arg joyeus)" name="joy_roseus" type="mycobot-joystick.l" pkg="mycoboteus"/>
+
 
   <!-- tf broadcaster -->
   <!-- <node type="tf_broadcaster" pkg="jsk_mycobot_startup" name="tf_mycobot_broadcaster"/> -->
