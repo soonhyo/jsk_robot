@@ -30,6 +30,8 @@
   <arg name="depth_height"        default="480"/> <!-- 720 -->
   <arg name="depth_fps"        default="30"/>
   <arg name="align_depth" default="true"/>
+  <arg name="enable_pointcloud"    default="true"/>
+
   <!-- for hsi  -->
   <arg name="in_points"         default="/camera/depth_registered/points"/>
   <!-- for joystick -->
@@ -61,6 +63,7 @@
     <arg name="depth_width"  value="$(arg depth_width)"/>
     <arg name="depth_height" value="$(arg depth_height)"/>
     <arg name="depth_fps"    value="$(arg depth_fps)"/>
+    <arg name="enable_pointcloud"    value="$(arg enable_pointcloud)"/>
   </include>
 
   <!-- hsi filter -->
