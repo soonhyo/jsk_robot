@@ -75,7 +75,6 @@
           (send *ri* :angle-vector (send *robot* :angle-vector) 300)
           (send *ri* :wait-interpolation)
 
-          )
         )
     )
   )
