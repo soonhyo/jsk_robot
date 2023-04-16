@@ -25,7 +25,7 @@
 
 (defun comb-from-pose (pose frame-id)
   (let
-      (comb-path-coords camera->base (stamp (ros::time 0)) )
+      (comb-path-coords (a nil) camera->base (stamp (ros::time 0)) )
 
     (unless (boundp '*tfl*)
       (setq *tfl* (instance ros::transform-listener :init)))
@@ -54,12 +54,29 @@
     (objects (list *robot* *arrow-mycobot-rarm* *arrow-mycobot-target*))
 
     ;; inverse-kinematics
-    ;; (send *robot* :rarm :inverse-kinematics comb-path-coords :rotation-axis nil :translation-axis nil)
-    (send *robot* :rarm :inverse-kinematics comb-path-coords :rotation-axis nil)
-
+    (setq a (send *robot* :rarm :inverse-kinematics comb-path-coords :rotation-axis nil))
+    ;; (send *robot* :rarm :inverse-kinematics comb-path-coords :rotation-axis nil)
     ;; send to real robot
-    (send *ri* :angle-vector (send *robot* :angle-vector) 100)
+    (send *ri* :angle-vector (send *robot* :angle-vector) 1000)
     (send *ri* :wait-interpolation)
+
+    ;; move end pose
+    (if (not (eq a nil))
+        (progn
+          (send *robot* :rarm :move-end-pos #f(0 0 -50) :world)
+
+          ;; send to real robot
+          (send *ri* :angle-vector (send *robot* :angle-vector) 1000)
+          (send *ri* :wait-interpolation)
+
+          (send *robot* :rarm :move-end-pos #f(-40 0 0) :local)
+
+          ;; send to real robot
+          (send *ri* :angle-vector (send *robot* :angle-vector) 300)
+          (send *ri* :wait-interpolation)
+
+          )
+        )
     )
   )
 ;; get pose array from topic
@@ -74,14 +91,12 @@
     (if poses
         (progn
           (print "pose")
-          (dolist (pose poses)
-            (print pose)
-            (comb-from-pose pose (send header :frame_id))
+          (comb-from-pose (car poses) (send header :frame_id))
             )
-          )
         )
     )
   )
+
 
 
 (ros::roseus "combloop")

@@ -36,7 +36,7 @@
   <arg name="in_points"         default="/camera/depth_registered/points"/>
   <!-- for joystick -->
   <arg name="interval"         default="0.2"/>
-  <arg name="autorate"         default="3"/>
+  <arg name="autorate"         default="5"/>
   <!-- for hair flow detect-->
   <arg name="input_image"         default="/camera/color/image_rect_color"/>
   <arg name="input_points"         default="/camera/depth_registered/points"/>
