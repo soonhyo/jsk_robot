@@ -65,6 +65,65 @@
          (roseus_resume::install-default-intervention self)
          (warning-message 3 "...done.~%")))
      ))
+  (:add-controller (ctype &key (joint-enable-check) (create-actions))
+   (let (tmp-actions)
+     (cond
+      (create-actions
+       (mapcar
+        #'(lambda (param)
+            (let* ((controller-action (cdr (assoc :controller-action param)))
+                   (action-type (cdr (assoc :action-type param)))
+                   (action (instance controller-action-client :init self
+                                     (if namespace (format nil "~A/~A" namespace controller-action)
+                                       controller-action) action-type
+                                       :groupname groupname)))
+              (push action tmp-actions)))
+        (send self ctype))
+       (setq tmp-actions (nreverse tmp-actions))
+       ;;
+       (dolist (action tmp-actions)
+         (unless controller-timeout
+           (ros::ros-warn "Waiting for actionlib interface forever because controller-timeout is nil"))
+         (unless (and joint-action-enable (send action :wait-for-server controller-timeout))
+           (ros::ros-warn "~A is not respond, ~A-interface is disabled" action (send robot :name))
+           (ros::ros-warn "~C[3~CmStarting 'Kinematics Simulator'~C[0m" #x1b 49 #x1b)
+           (ros::ros-warn "~C[3~Cm (If you do not intend to start Kinematics Simulator, make sure that you can run 'rostopic info /~A/goal' and 'rostopic info /~A/cancel' and check whether Subscribers exists. If there is no Subscribers, please check joint_trajectory_action node.)~C[0m" #x1b 52 (send action :name) (send action :name) #x1b)
+           (ros::ros-warn "~C[3~Cm (Please also check 'rostopic info /~A/feedback' and 'rostopic info /~A/result' and check whether Publishers exists. If there is no Publishers, please check joint_trajectory_action node.)~C[0m" #x1b 52 (send action :name) (send action :name) #x1b)
+           (ros::ros-warn "~C[3~Cm (If joint_trajectory_action node already exists, you might have a network problem. Please make sure that you can run 'rosnode ping JOINT_TRAJECTORY_ACTION_SERVER_NODE_NAME' and 'rosnode ping ~A')~C[0m" #x1b 52 (ros::get-name) #x1b)
+           (when joint-enable-check
+             (setq joint-action-enable nil)
+             (return))))
+       ;;
+       (dolist (param (send self ctype))
+         (let* ((controller-state (cdr (assoc :controller-state param)))
+                (key (intern (string-upcase controller-state) *keyword-package*)))
+           (ros::subscribe (if namespace (format nil "~A/~A" namespace controller-state)
+                             controller-state)
+                           (if (eq ctype :head-controller)
+                             baxter_core_msgs::HeadState
+                             control_msgs::JointTrajectoryControllerState)
+                           #'send self :set-robot-state1 key :groupname groupname)))
+       )
+      (t ;; not creating actions, just search
+       (mapcar
+        #'(lambda (param)
+            (let* ((controller-action (cdr (assoc :controller-action param)))
+                   (action-type (cdr (assoc :action-type param)))
+                   (name (if namespace (format nil "~A/~A" namespace controller-action)
+                           controller-action))
+                   action)
+              (setq action (find-if #'(lambda (ac) (string= name (send ac :name)))
+                                    controller-actions))
+              (if action (push action tmp-actions))
+              ))
+        (send self ctype))
+       (setq tmp-actions (nreverse tmp-actions))
+       ))
+     ;;
+     (setf (gethash ctype controller-table) tmp-actions)
+     tmp-actions
+     ))
+  ;;
   (:right-property-cb (msg)
    (setq right-gripper-type (send msg :id))
    )
@@ -79,15 +138,15 @@
   (:larm-controller ()
    (list
     (list
-     (cons :controller-action "/robot/limb/left/follow_joint_trajectory")
-     (cons :controller-state "/robot/limb/left/state")
+     (cons :controller-action "/robot/left_cartesian_impedacne_trajectory_controller/follow_joint_trajectory")
+     (cons :controller-state "/robot/left_cartesian_impedacne_trajectory_controller/controller_state")
      (cons :action-type control_msgs::FollowJointTrajectoryAction)
      (cons :joint-names (list "left_s0" "left_s1" "left_e0" "left_e1" "left_w0" "left_w1" "left_w2")))))
   (:rarm-controller ()
    (list
     (list
-     (cons :controller-action "/robot/limb/right/follow_joint_trajectory")
-     (cons :controller-state "/robot/limb/right/state")
+     (cons :controller-action "/robot/right_cartesian_impedacne_trajectory_controller/follow_joint_trajectory")
+     (cons :controller-state "/robot//right_cartesian_impedacne_trajectory_controller/controller_state")
      (cons :action-type control_msgs::FollowJointTrajectoryAction)
      (cons :joint-names (list "right_s0" "right_s1" "right_e0" "right_e1" "right_w0" "right_w1" "right_w2")))))
   (:head-controller ()
