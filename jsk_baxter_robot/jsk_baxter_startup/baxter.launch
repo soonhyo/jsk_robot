@@ -100,18 +100,18 @@
 
   <!-- Startup joint trajectory will enable send command from eus-->
   <group if="$(arg launch_joint_trajectory)">
-    <node name="baxter_joint_trajectory"
-          pkg="baxter_interface" type="joint_trajectory_action_server.py"
-          args="--interpolation $(arg arm_interpolation) --mode $(arg arm_control_mode)" output="screen" respawn="true"/>
+    <!-- <node name="baxter_joint_trajectory" -->
+    <!--       pkg="baxter_interface" type="joint_trajectory_action_server.py" -->
+    <!--       args="-\-interpolation $(arg arm_interpolation) -\-mode $(arg arm_control_mode)" output="screen"/> -->
     <node name="head_joint_trajectory"
           pkg="baxter_interface" type="head_action_server.py"
           args="" output="screen" respawn="true"/>
     <group if="$(arg sanity_check_joint_trajectory)">
       <!-- sanity check of action servers -->
       <node name="sanity_check_of_head_action_server"
-            pkg="jsk_baxter_startup" type="sanity_check_of_head_action_server.py" respawn="true"/>
+            pkg="jsk_baxter_startup" type="sanity_check_of_head_action_server.py"/>
       <node name="sanity_check_of_joint_trajectory_action_server"
-            pkg="jsk_baxter_startup" type="sanity_check_of_joint_trajectory_action_server.py" respawn="true" />
+            pkg="jsk_baxter_startup" type="sanity_check_of_joint_trajectory_action_server.py"/>
     </group>
   </group>
 
