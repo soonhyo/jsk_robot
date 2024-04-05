@@ -31,6 +31,7 @@
   <arg name="depth_fps"        default="30"/>
   <arg name="align_depth" default="true"/>
   <arg name="enable_pointcloud"    default="true"/>
+  <arg name="camera_ns" default="camera" />
 
   <!-- for hsi  -->
   <arg name="in_points"         default="/camera/depth_registered/points"/>
@@ -45,7 +46,7 @@
   <include file="$(find mycobot_communication)/launch/mycobot_interface.launch" >
     <arg name="port" value="$(arg port)" />
     <arg name="baud" value="$(arg baud)" />
-    <arg name="debug" value="$(arg mycobot_debug)" />
+    <!-- <arg name="debug" value="$(arg mycobot_debug)" /> -->
   </include>
 
   <!-- Moveit -->
@@ -66,32 +67,15 @@
     <arg name="enable_pointcloud"    value="$(arg enable_pointcloud)"/>
   </include>
 
-  <!-- hsi filter -->
-  <include if="$(arg hsi)" file="$(find jsk_pcl_ros)/launch/hsi_color_filter.launch">
-    <arg name="DEFAULT_NAMESPACE" value="hsi_color_filter"/>
-    <arg name="INPUT" value="$(arg in_points)"/>
-    <arg name="h_max" default="-82" /><!-- blue -->
-    <arg name="h_min" default="-106" />
-    <arg name="s_max" default="205" />
-    <arg name="s_min" default="158" />
-    <arg name="i_max" default="100" />
-    <arg name="i_min" default="26" />
-  </include>
-
-  <include if="$(arg hair_flow_detect)" file="$(find hair_flow_detect)/launch/hair_flow_detect.launch">
-    <arg name="openni" default="$(arg openni)" />
-    <arg name="gui" default="false" />
-    <arg name="input_image" default="$(arg input_image)" />
-    <arg name="input_points" default="$(arg input_points)" />
-    <arg name="open3d_viz" default="$(arg hair_flow_open3d_viz)" />
-  </include>
+  <node name="realsense_transform_publisher" pkg="tf" type="static_transform_publisher"
+        args="-0.03 0.07 0.2 0.0 0.0 0.0 link1 $(arg camera_ns)_link 100" />
 
   <!-- joystick -->
-  <node if="$(arg joy)" name="joy" type="joy_node" pkg="joy" args="_coalesce_interval:=$(arg interval) _autorepeat_rate:=$(arg autorate)"/>
-  <node if="$(arg joyeus)" name="joy_roseus" type="mycobot-joystick.l" pkg="mycoboteus"/>
+  <!-- <node if="$(arg joy)" name="joy" type="joy_node" pkg="joy" args="_coalesce_interval:=$(arg interval) _autorepeat_rate:=$(arg autorate)"/> -->
+  <!-- <node if="$(arg joyeus)" name="joy_roseus" type="mycobot-joystick.l" pkg="mycoboteus"/> -->
 
 
-  <!-- tf broadcaster -->
+65;6003;1c  <!-- tf broadcaster -->
   <!-- <node type="tf_broadcaster" pkg="jsk_mycobot_startup" name="tf_mycobot_broadcaster"/> -->
 
   <!-- Rviz -->
