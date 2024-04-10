@@ -75,7 +75,7 @@
   <!-- <node if="$(arg joyeus)" name="joy_roseus" type="mycobot-joystick.l" pkg="mycoboteus"/> -->
 
 
-65;6003;1c  <!-- tf broadcaster -->
+  <!-- tf broadcaster -->
   <!-- <node type="tf_broadcaster" pkg="jsk_mycobot_startup" name="tf_mycobot_broadcaster"/> -->
 
   <!-- Rviz -->
