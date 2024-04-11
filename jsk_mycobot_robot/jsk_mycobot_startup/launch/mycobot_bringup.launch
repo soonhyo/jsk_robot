@@ -1,5 +1,5 @@
 <launch>
-  <arg name="port" default="/dev/mycobot" doc ="the serial port for connection" />
+  <arg name="port" default="/dev/ttyACM0" doc ="the serial port for connection" />
   <arg name="baud" default="115200" doc ="the serial baudrate" />
   <arg name="rviz" default="false" doc="Set true if you want RViz." />
   <arg name="hsi" default="true" doc="Set true if you want to use hsi filter." />
@@ -66,10 +66,14 @@
     <arg name="depth_fps"    value="$(arg depth_fps)"/>
     <arg name="enable_pointcloud"    value="$(arg enable_pointcloud)"/>
   </include>
-
+<!-- home config -->
+  <!-- <node name="realsense_transform_publisher" pkg="tf" type="static_transform_publisher" -->
+  <!--       args="-0.03 0.07 0.2 0.0 0.0 0.0 link1 $(arg camera_ns)_link 100" /> -->
+<!-- lab config -->
   <node name="realsense_transform_publisher" pkg="tf" type="static_transform_publisher"
-        args="-0.03 0.07 0.2 0.0 0.0 0.0 link1 $(arg camera_ns)_link 100" />
+        args="-0.04 0.115 0.3 0.0 0.2617 0.0 link1 $(arg camera_ns)_link 100" />
 
+  <node name="atom_button_servo_switch" pkg="mycobot_280" type="atom_button_listener"/>
   <!-- joystick -->
   <!-- <node if="$(arg joy)" name="joy" type="joy_node" pkg="joy" args="_coalesce_interval:=$(arg interval) _autorepeat_rate:=$(arg autorate)"/> -->
   <!-- <node if="$(arg joyeus)" name="joy_roseus" type="mycobot-joystick.l" pkg="mycoboteus"/> -->
