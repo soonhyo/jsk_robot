@@ -30,6 +30,9 @@
        doc="Baxter arm controller mode: positon_w_id, position or velocity (default: position_w_id)" />
   <arg name="USER_NAME" default="false"/>
 
+  <!-- admittance control mode -->
+  <arg name="pimp_mode" default="false"/>
+
   <param name="/robot/name" value="baxter" />
   <param name="/robot/type" value="baxter" />
   <param name="/active_user/launch_user_name" value="$(arg USER_NAME)"/>
@@ -57,7 +60,7 @@
   <group if="$(arg launch_joint_trajectory)">
     <node name="baxter_joint_trajectory"
           pkg="baxter_interface" type="joint_trajectory_action_server.py"
-          args="--interpolation $(arg arm_interpolation) --mode $(arg arm_control_mode)" output="screen"/>
+          args="--interpolation $(arg arm_interpolation) --mode $(arg arm_control_mode) --pimp $(arg pimp_mode)" output="screen"/>
     <node name="head_joint_trajectory"
           pkg="baxter_interface" type="head_action_server.py"
           args="" output="screen"/>
