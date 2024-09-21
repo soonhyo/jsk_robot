@@ -1,0 +1,36 @@
+<launch>
+  <arg name="port" default="/dev/ttyUSB0" doc ="the serial port for connection" />
+  <arg name="baud" default="115200" doc ="the serial baudrate" />
+  <arg name="robot_type" default="mycobot"/>
+  <!-- <arg name="urdf_path" default="$(find mycobot_description)/urdf/$(arg robot_type)/mycobot.urdf.xacro"/> -->
+  <arg name="model" default="$(find mycobot_description)/urdf/mycobot_280_m5/mycobot_280_m5.urdf"/>
+
+
+  <!-- Driver -->
+  <!-- <node pkg="jsk_mycobot_startup" type="mycobot_interface.py" name="$(anon mycobot_bridge)"  output="screen" > -->
+  <!--   <param name="port" value="$(arg port)" /> -->
+  <!--   <param name="baud" value="$(arg baud)" /> -->
+  <!--   <param name="model" value="$(arg robot_type)" /> -->
+  <!-- </node> -->
+
+  <!-- robot state publisher for tf -->
+  <!-- <param name="robot_description" command="$(find xacro)/xacro '$(arg urdf_path)'" /> -->
+  <!-- <param name="robot_description" command="$(find xacro)/xacro '$(arg model)'" /> -->
+  <include file="$(find mycobot_communication)/launch/communication_service.launch">
+		<arg name="port" value="$(arg port)" />
+		<arg name="baud" value="$(arg baud)" />
+  </include>
+  <node name="real_listener" pkg="mycobot_280" type="listen_real.py" />
+  <!-- <include file="$(find mycobot_communication)/launch/communication_topic.launch"> -->
+	<!-- 	<arg name="port" value="$(arg port)" /> -->
+	<!-- 	<arg name="baud" value="$(arg baud)" /> -->
+  <!-- </include> -->
+  <!-- <node name="real_listener" pkg="mycobot_280" type="listen_real_of_topic.py" /> -->
+
+  <param name="robot_description" command="$(find xacro)/xacro --inorder $(arg model)" />
+
+
+
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+
+</launch>

@@ -10,12 +10,12 @@
 
 (defmethod mycobot-moveit-environment
   (:init (&key args)
-         (send-super* :init :robot (instance mycobot-robot :init) :frame-id "link1" args))
+         (send-super* :init :robot (instance firefighter-robot :init) :frame-id "g_base" args))
   (:default-configuration ()
    (list (list :rarm
                (cons :group-name "arm_group")
-               (cons :target-link
-                     (send self :search-link-from-name "link7"))
+               (cons :target-joint
+                     (send self :search-link-from-name "joint6_flange"))
                (cons :joint-list (send robot :rarm :joint-list)))))
   )
 
@@ -28,7 +28,7 @@
 
 (defmethod mycobot-interface
   (:init (&rest args)
-    (prog1 (send-super* :init :robot mycobot-robot :joint-states-topic "joint_states" args)
+    (prog1 (send-super* :init :robot firefighter-robot :joint-states-topic "joint_states" args)
       (send self :add-controller :rarm-controller)
       (setq gripper-action
             (instance ros::simple-action-client :init
@@ -47,7 +47,7 @@
         (cons :controller-state "/arm_controller/follow_joint_trajectory/state")
         (cons :action-type control_msgs::FollowJointTrajectoryAction)
         (cons :joint-names
-              (list "joint1" "joint2" "joint3" "joint4" "joint5" "joint6")))))
+              (list "joint2_to_joint1" "joint3_to_joint2" "joint4_to_joint3" "joint5_to_joint4" "joint6_to_joint5" "joint6output_to_joint6")))))
 
   (:go-grasp (&key (pos 0) (wait t))
     (when (send self :simulation-modep)
@@ -78,9 +78,15 @@
     "/set_servo" (instance std_srvs::SetBoolRequest :init :data nil)))
   )
 
+(defun set-angles-limit (robot)
+  (let ((jtl (butlast (send robot :joint-list))) jt)
+    (while (setq jt (pop jtl))
+      (send jt :min-angle -170)
+      (send jt :max-angle 170))))
 
 (defun mycobot-init ()
-  (setq *mycobot* (instance mycobot-robot :init))
+  (setq *mycobot* (instance firefighter-robot :init))
+  (set-angles-limit *mycobot*)
   (setq *robot* *mycobot*)
   (setq *ri* (instance mycobot-interface :init))
   (send *robot* :angle-vector (send *ri* :state :potentio-vector))
