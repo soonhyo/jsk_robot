@@ -16,7 +16,7 @@
              (cdr (subst '(list :diffuse #f(0.5 0.5 0.5 1.0))
                          '(list :diffuse (float-vector 1.0 1.0 1.0 1.0))
                          (assoc b (send  (class self) :methods))))))
-   (send* self :init-orig args))
+      (send* self :init-orig args))
 
 
 (provide :mycobot-utils "package://mycoboteus/mycobot-utils.l")

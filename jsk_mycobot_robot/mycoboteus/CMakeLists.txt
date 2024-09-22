@@ -31,9 +31,11 @@ endif()
 ###########
 ## Build ##
 ###########
-set(_mycobot_urdf ${mycobot_description_SOURCE_PREFIX}/urdf/mycobot_280_m5)
-# set(_mycobot_urdf ${PROJECT_SOURCE_DIR}/urdf)
+# set(_mycobot_urdf ${mycobot_description_SOURCE_PREFIX}/urdf/mycobot_280_m5)
+set(_mycobot_urdf ${PROJECT_SOURCE_DIR}/urdf)
 set(_collada2eus ${euscollada_PREFIX}/lib/euscollada/collada2eus)
+# set(FILTER_SCRIPT ${PROJECT_SOURCE_DIR}/scripts/filter_model.py)
+set(LINKS_TO_IGNORE "g_base")
 
 message("mycobot_urdf: ${_mycobot_urdf}")
 message("collada2eus: ${_collada2eus}")
@@ -43,12 +45,22 @@ message("collada2eus: ${_collada2eus}")
 #   COMMAND xacro ${_mycobot_urdf}/mycobot.urdf.xacro > ${PROJECT_BINARY_DIR}/mycobot.urdf
 #   DEPENDS ${_mycobot_urdf}/mycobot.urdf.xacro)
 
+add_custom_command(OUTPUT ${PROJECT_SOURCE_DIR}/urdf/mycobot_filtered.urdf
+  COMMAND ${Python_EXECUTABLE} ${FILTER_SCRIPT} ${_mycobot_urdf}/mycobot_280_m5.urdf ${LINKS_TO_IGNORE}
+  DEPENDS ${_mycobot_urdf}/mycobot_280_m5.urdf ${FILTER_SCRIPT}
+)
+
 add_custom_command(OUTPUT ${PROJECT_SOURCE_DIR}/mycobot.l
   COMMAND echo "${_collada2eus} ${_mycobot_urdf}/mycobot_280_m5.urdf mycobot.l"
   COMMAND ${_collada2eus} ${_mycobot_urdf}/mycobot_280_m5.urdf ${PROJECT_SOURCE_DIR}/mycobot.yaml ${PROJECT_SOURCE_DIR}/mycobot.l
   DEPENDS ${_mycobot_urdf}/mycobot_280_m5.urdf ${PROJECT_SOURCE_DIR}/mycobot.yaml ${_collada2eus})
 add_custom_target(compile_mycobot ALL DEPENDS ${PROJECT_SOURCE_DIR}/mycobot.l)
 
+# add_custom_command(OUTPUT ${PROJECT_SOURCE_DIR}/mycobot.l
+#   COMMAND echo "${_collada2eus} ${PROJECT_SOURCE_DIR}/urdf/mycobot_filtered.urdf mycobot.l"
+#   COMMAND ${_collada2eus} ${PROJECT_SOURCE_DIR}/urdf/mycobot_filtered.urdf ${PROJECT_SOURCE_DIR}/mycobot.yaml ${PROJECT_SOURCE_DIR}/mycobot.l
+#   DEPENDS ${PROJECT_SOURCE_DIR}/urdf/mycobot_filtered.urdf ${PROJECT_SOURCE_DIR}/mycobot.yaml ${_collada2eus})
+# add_custom_target(compile_mycobot ALL DEPENDS ${PROJECT_SOURCE_DIR}/mycobot.l)
 
 #############
 ## Install ##
