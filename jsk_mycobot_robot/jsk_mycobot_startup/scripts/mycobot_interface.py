@@ -31,7 +31,7 @@ class MycobotInterface(object):
         baud = rospy.get_param("~baud", 115200)
         self.model = rospy.get_param("~model", '280')
         self.vel_rate = rospy.get_param("~vel_rate", 64.0) # bit/rad
-        self.min_vel = rospy.get_param("~min_vel", 10) # bit, for the bad velocity tracking of mycobot.
+        self.min_vel = rospy.get_param("~min_vel", 5) # bit, for the bad velocity tracking of mycobot.
         # self.vel_rate = rospy.get_param("~vel_rate", 32.0) # bit/rad
         # self.min_vel = rospy.get_param("~min_vel", 10) # bit, for the bad velocity tracking of mycobot.
 
@@ -67,27 +67,29 @@ class MycobotInterface(object):
         self.gripper_as = actionlib.SimpleActionServer("gripper_controller/gripper_command", GripperCommandAction, execute_cb=self.gripper_as_cb)
         self.gripper_as.start()
 
-        self.get_atom_button = True
+        self.get_atom_button = False
 
         self.servo_on = True
 
-        self.r = rospy.Rate(rospy.get_param("~joint_state_rate", 10.0)) # hz
-
     def run(self):
 
-        r = rospy.Rate(rospy.get_param("~joint_state_rate", 10)) # hz
+        r = rospy.Rate(rospy.get_param("~joint_state_rate", 20)) # hz
 
         while not rospy.is_shutdown():
 
             # get real joint from MyCobot
             if self.get_joint_state:
-                real_angles = self.mc.get_angles()
+                # real_angles = self.mc.get_angles()
 
                 # the duration is over the sending loop, not good
                 # self.lock.acquire()
                 # real_angles = self.mc.get_angles()
                 # self.lock.release()
 
+                with self.lock:
+                    real_angles = self.mc.get_angles()
+
+                rospy.loginfo(f"angle:{real_angles}")
                 if len(real_angles) != 6: # we assume mycobot only have 6 DoF of joints
                     rospy.logwarn("empty joint angles!!!")
                 else:
@@ -282,7 +284,7 @@ class MycobotInterface(object):
 
         ## wait for start
         rospy.loginfo("Trajectory start requested at %.3lf, waiting...", goal.trajectory.header.stamp.to_sec())
-        r = rospy.Rate(5)
+        r = rospy.Rate(20)
         while (goal.trajectory.header.stamp - time).to_sec() > 0:
             time = rospy.Time.now()
             r.sleep()
@@ -301,6 +303,8 @@ class MycobotInterface(object):
                 continue;
 
             target_angles =  np.array(seg['positions']) * 180 / np.pi
+            # target_angles =  target_angles.astype(np.float16)
+            #target_angles =  target_angles.round(decimals=3)
             actual_angles = np.array(self.real_angles);
 
             # workaround to solve bad joint velocity control
@@ -313,9 +317,12 @@ class MycobotInterface(object):
                     vel = self.min_vel
                 # vel = 0 # zero in pymycobot is the max speed
 
-            self.lock.acquire()
-            self.mc.send_angles(target_angles.tolist(), vel)
-            self.lock.release()
+            # self.lock.acquire()
+            # self.mc.send_angles(target_angles.tolist(), vel)
+            # self.lock.release()
+            with self.lock:
+                self.mc.send_angles(target_angles.tolist(), vel) # send_angles is async code?
+                rospy.sleep(0.08) # send_angles takes time much more than get_angles?
 
             # workaround: pure feedforwad style to address the polling/sending conflict problem in mycobot pro 320
             if not self.get_joint_state:
@@ -332,9 +339,12 @@ class MycobotInterface(object):
                 # by setting the goal to the current position
                 if self.joint_as.is_preempt_requested():
 
-                    self.lock.acquire()
-                    self.mc.send_angles(self.real_angles, 0)
-                    self.lock.release()
+                    #self.lock.acquire()
+                    # self.mc.send_angles(self.real_angles, 0)
+                    #self.mc.stop()
+                    #self.lock.release()
+                    # with self.lock:
+                    #     self.mc.stop()
 
                     self.joint_as.set_preempted()
                     if self.joint_as.is_new_goal_available():
@@ -346,7 +356,7 @@ class MycobotInterface(object):
                     return;
 
 
-                if (time - feedback.header.stamp).to_sec() > 0.1: # 10 Hz
+                if (time - feedback.header.stamp).to_sec() > 0.05: # 20 Hz
 
                     feedback.header.stamp = time;
                     feedback.desired.positions = (target_angles / 180 * np.pi).tolist()
