@@ -4,6 +4,7 @@
   <arg name="rviz" default="false" doc="Set true if you want RViz." />
   <arg name="moveit" default="false" doc="Set true if you want Moveit-based plan." />
   <arg name="mycobot_debug" default="false" doc="Set true if you want to check mycobot comm and others"/>
+  <arg name="camera_ns" default="camera" />
 
   <!-- Driver -->
   <include file="$(find jsk_mycobot_startup)/launch/mycobot_interface.launch" >
@@ -17,6 +18,8 @@
   </include>
 
   <!-- <node name="atom_button_servo_switch" pkg="mycobot_280" type="atom_button_listener.py"/> -->
+  <node name="realsense_transform_publisher" pkg="tf" type="static_transform_publisher"
+        args="-0.030 0.128 0.315 -1.5707 0.3425 0.0 link1 $(arg camera_ns)_link 100" />
 
   <!-- Rviz -->
   <include if="$(arg rviz)" file="$(find jsk_mycobot_startup)/launch/rviz.launch" />
