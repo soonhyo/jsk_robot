@@ -74,7 +74,7 @@ class MycobotInterface(object):
 
     def run(self):
 
-        r = rospy.Rate(rospy.get_param("~joint_state_rate", 30)) # hz
+        r = rospy.Rate(rospy.get_param("~joint_state_rate", 20)) # hz
 
         while not rospy.is_shutdown():
 
@@ -288,7 +288,7 @@ class MycobotInterface(object):
 
         ## wait for start
         rospy.loginfo("Trajectory start requested at %.3lf, waiting...", goal.trajectory.header.stamp.to_sec())
-        r = rospy.Rate(30)
+        r = rospy.Rate(20)
         while (goal.trajectory.header.stamp - time).to_sec() > 0:
             time = rospy.Time.now()
             r.sleep()

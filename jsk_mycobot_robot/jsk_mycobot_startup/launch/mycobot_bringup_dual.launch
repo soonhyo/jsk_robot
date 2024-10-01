@@ -1,7 +1,7 @@
 <launch>
-  <arg name="port_1" default="/dev/ttyUSB0" doc ="the serial port for connection" />
+  <arg name="port_1" default="/dev/ttyACM0" doc ="the serial port for connection" />
   <arg name="baud_1" default="115200" doc ="the serial baudrate" />
-  <arg name="port_2" default="/dev/ttyACM0" doc ="the serial port for connection" />
+  <arg name="port_2" default="/dev/ttyACM1" doc ="the serial port for connection" />
   <arg name="baud_2" default="115200" doc ="the serial baudrate" />
 
   <arg name="rviz" default="true" doc="Set true if you want RViz." />
@@ -9,18 +9,16 @@
 
   <!-- Driver -->
   <group ns="rarm">
-    <include file="$(find mycobot_communication)/launch/mycobot_dual_interface.launch" >
-      <arg name="port" value="$(arg port_1)" />
-      <arg name="baud" value="$(arg baud_1)" />
-      <arg name="arm_type" value="rarm" />
+    <include file="$(find jsk_mycobot_startup)/launch/mycobot_interface.launch" >
+        <arg name="port" value="$(arg port_1)" />
+        <arg name="baud" value="$(arg baud_1)" />
     </include>
   </group>
 
   <group ns="larm">
-    <include file="$(find mycobot_communication)/launch/mycobot_dual_interface.launch" >
+    <include file="$(find jsk_mycobot_startup)/launch/mycobot_interface.launch" >
       <arg name="port" value="$(arg port_2)" />
       <arg name="baud" value="$(arg baud_2)" />
-      <arg name="arm_type" value="larm" />
     </include>
   </group>
 
