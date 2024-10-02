@@ -1,7 +1,7 @@
 #!/usr/bin/env roseus
 
 (require "package://pr2eus/robot-interface.l")
-(require "package://pr2eus/robot-moveit.l")
+(require "package://pr2eus_moveit/euslisp/robot-moveit.l")
 (load "package://mycoboteus/mycobot-utils.l")
 (ros::roseus-add-srvs "std_srvs")
 
