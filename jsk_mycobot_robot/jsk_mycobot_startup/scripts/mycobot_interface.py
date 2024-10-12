@@ -71,6 +71,7 @@ class MycobotInterface(object):
 
         self.servo_on = True
         self.mc.set_color(0,255,0)
+        self.mc.set_fresh_mode(1) # 1 - Always execute the latest command first. 0 - Execute instructions sequentially in the form of a queue.
 
     def run(self):
 
