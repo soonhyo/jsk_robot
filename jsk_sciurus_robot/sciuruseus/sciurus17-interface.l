@@ -117,47 +117,6 @@
        (push (send client :get-result) results))
      results))
 
-  (:angle-vector
-   (av &optional tm (ctype controller-type) (start-time 0) &rest args
-       &key (move-arm :arms) start-offset-time (clear-velocities t) &allow-other-keys)
-   (setq ctype (or ctype controller-type))
-   (when (send self :simulation-modep)
-     (return-from :angle-vector (send* self :angle-vector-raw av tm ctype start-time args)))
-   (if (and (get self :moveit-environment)
-            (send (get self :moveit-environment) :robot))
-     (progn
-       (unless tm (setq tm 3000))
-       (send-super* :angle-vector-motion-plan av :ctype ctype :move-arm move-arm :total-time tm
-                    :start-offset-time (if start-offset-time start-offset-time start-time)
-                    :clear-velocities clear-velocities :use-torso nil args))
-     (progn
-       (warning-message 3 "moveit environment is not correctly set, execute :angle-vector-raw instead~%")
-       (unless tm (setq tm :fast))
-       (return-from :angle-vector (send* self :angle-vector-raw av tm ctype start-time args)))))
-
-  (:angle-vector-sequence
-   (avs &optional tms (ctype controller-type) (start-time 0) &rest args
-        &key (move-arm :arms) start-offset-time (clear-velocities t) &allow-other-keys)
-   (setq ctype (or ctype controller-type))
-   (when (send self :simulation-modep)
-     (return-from :angle-vector-sequence
-                  (send* self :angle-vector-sequence-raw avs tms ctype start-time args)))
-   (if (and (get self :moveit-environment)
-            (send (get self :moveit-environment) :robot))
-     (progn
-       (setq tms
-             (if tms
-               (if (and (listp tms) (every #'numberp tms)) (apply #'+ tms) tms)
-               3000))
-       (send-super* :angle-vector-motion-plan avs :ctype ctype :move-arm move-arm :total-time tms
-                    :start-offset-time (if start-offset-time start-offset-time start-time)
-                    :clear-velocities clear-velocities :use-torso nil args))
-     (progn
-       (warning-message 3 "moveit environment is not correctly set, execute :angle-vector-sequence-raw instead~%")
-       (unless tms (setq tms :fast))
-       (return-from :angle-vector-sequence
-                    (send* self :angle-vector-sequence-raw avs tms ctype start-time args)))))
-
   (:ros-state-callback
    (msg)
    (send-super :ros-state-callback msg))
