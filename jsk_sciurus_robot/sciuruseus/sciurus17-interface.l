@@ -74,18 +74,18 @@
   (:head-controller ()
    (list
     (list
-     (cons :controller-action "/sciurus17/controller3/head_controller/follow_joint_trajectory")
-     (cons :controller-state "/sciurus17/controller3/head_controller/state")
+     (cons :controller-action "/sciurus17/controller3/neck_controller/follow_joint_trajectory")
+     (cons :controller-state "/sciurus17/controller3/neck_controller/state")
      (cons :action-type control_msgs::FollowJointTrajectoryAction)
-     (cons :joint-names (list "head_yaw_joint" "head_pitch_joint")))))
+     (cons :joint-names (list "neck_yaw_joint" "neck_pitch_joint")))))
 
   (:torso-controller ()
    (list
     (list
-     (cons :controller-action "/sciurus17/controller3/torso_yaw_controller/follow_joint_trajectory")
-     (cons :controller-state "/sciurus17/controller3/torso_yaw_controller/state")
+     (cons :controller-action "/sciurus17/controller3/waist_yaw_controller/follow_joint_trajectory")
+     (cons :controller-state "/sciurus17/controller3/waist_yaw_controller/state")
      (cons :action-type control_msgs::FollowJointTrajectoryAction)
-     (cons :joint-names (list "torso_yaw_joint")))))
+     (cons :joint-names (list "waist_yaw_joint")))))
 
 
   (:start-grasp
@@ -147,16 +147,18 @@
                        (send self :search-link-from-name "r_link7")))
                (cons :joint-list (append (send robot :larm :joint-list)
                                          (send robot :rarm :joint-list))))
-         (list :rarm-w
+         (list :wrarm
                (cons :group-name "r_arm_waist_group")
                (cons :target-link
                      (send self :search-link-from-name "r_link7"))
-               (cons :joint-list (send robot :torso :joint-list)))
-         (list :larm-w
+               (cons :joint-list (append (send robot :torso :joint-list)
+                                         (send robot :rarm :joint-list))))
+         (list :wlarm
                (cons :group-name "l_arm_waist_group")
                (cons :target-link
                      (send self :search-link-from-name "l_link7"))
-               (cons :joint-list (send robot :torso :joint-list)))
+               (cons :joint-list (append (send robot :torso :joint-list)
+                                         (send robot :larm :joint-list))))
          )))
 
 (defun sciurus-init (&key (type :default-controller) (moveit t))
