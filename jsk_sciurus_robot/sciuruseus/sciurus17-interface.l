@@ -2,19 +2,10 @@
 (require :sciurus17 "package://sciuruseus/sciurus17-utils.l")
 (ros::load-ros-package "control_msgs")
 
-(defvar *enable-roseus-resume* (ros::rospack-find "roseus_resume"))
-(if *enable-roseus-resume*
-  (progn
-    (require :roseus_resume "package://roseus_resume/euslisp/interruption-handler.l")
-    (warning-message 2 "roseus_resume is enabled.~%"))
-  (progn
-    (unless (find-package "ROSEUS_RESUME") (make-package "ROSEUS_RESUME"))
-    (warning-message 3 "roseus_resume is disabled.~%")))
-
 (defclass sciurus17-interface
   :super robot-interface
   :slots (gripper-sequence-id right-gripper-action left-gripper-action
-          right-gripper-type left-gripper-type moveit-robot))
+          right-gripper-type left-gripper-type moveit-robot hard-coded-pose-table))
 
 (defmethod sciurus17-interface
   (:init (&rest args &key ((:moveit-environment mvit-env) (instance sciurus17-moveit-environment))
@@ -24,8 +15,8 @@
    (prog1 (send-super* :init :robot robot :joint-states-topic "/joint_states" :groupname "sciurus17_interface" args)
      (send self :add-controller :larm-controller)
      (send self :add-controller :rarm-controller)
-     (send self :add-controller :neck-controller)
-     (send self :add-controller :waist-controller)
+     (send self :add-controller :head-controller)
+     (send self :add-controller :torso-controller)
 
      (setq right-gripper-action (instance ros::simple-action-client :init
                                           "/sciurus17/controller1/right_hand_controller/gripper_cmd"
@@ -60,8 +51,8 @@
    (append
     (send self :larm-controller)
     (send self :rarm-controller)
-    (send self :neck-controller)
-    (send self :waist-controller)
+    (send self :head-controller)
+    (send self :torso-controller)
     ))
 
   (:larm-controller ()
@@ -80,21 +71,21 @@
      (cons :action-type control_msgs::FollowJointTrajectoryAction)
      (cons :joint-names (list "r_arm_joint1" "r_arm_joint2" "r_arm_joint3" "r_arm_joint4" "r_arm_joint5" "r_arm_joint6" "r_arm_joint7")))))
 
-  (:neck-controller ()
+  (:head-controller ()
    (list
     (list
-     (cons :controller-action "/sciurus17/controller3/neck_controller/follow_joint_trajectory")
-     (cons :controller-state "/sciurus17/controller3/neck_controller/state")
+     (cons :controller-action "/sciurus17/controller3/head_controller/follow_joint_trajectory")
+     (cons :controller-state "/sciurus17/controller3/head_controller/state")
      (cons :action-type control_msgs::FollowJointTrajectoryAction)
-     (cons :joint-names (list "neck_yaw_joint" "neck_pitch_joint")))))
+     (cons :joint-names (list "head_yaw_joint" "head_pitch_joint")))))
 
-  (:waist-controller ()
+  (:torso-controller ()
    (list
     (list
-     (cons :controller-action "/sciurus17/controller3/waist_yaw_controller/follow_joint_trajectory")
-     (cons :controller-state "/sciurus17/controller3/waist_yaw_controller/state")
+     (cons :controller-action "/sciurus17/controller3/torso_yaw_controller/follow_joint_trajectory")
+     (cons :controller-state "/sciurus17/controller3/torso_yaw_controller/state")
      (cons :action-type control_msgs::FollowJointTrajectoryAction)
-     (cons :joint-names (list "waist_yaw_joint")))))
+     (cons :joint-names (list "torso_yaw_joint")))))
 
 
   (:start-grasp
