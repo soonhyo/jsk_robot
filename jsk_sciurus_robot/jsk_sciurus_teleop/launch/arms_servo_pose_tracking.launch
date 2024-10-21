@@ -6,7 +6,7 @@
   <arg name="config" default="$(find jsk_sciurus_teleop)/config/teleop/sciurus17_simulated_config.yaml"/>
 
 
-  <node name="servo_server" pkg="moveit_servo" type="pose_tracking" output="screen">
+  <node name="servo_server" pkg="moveit_servo" type="pose_tracking_example" output="screen">
     <rosparam command="load" file="$(arg config)" />
     <rosparam command="load" file="$(find jsk_sciurus_teleop)/config/teleop/pose_tracking_settings.yaml" />
   </node>

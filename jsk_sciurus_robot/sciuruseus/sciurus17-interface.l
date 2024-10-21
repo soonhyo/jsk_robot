@@ -12,7 +12,7 @@
                 ((:moveit-robot mvit-rb) (instance sciurus17-robot :init))
                 ((:robot robot) sciurus17-robot)
                 &allow-other-keys)
-   (prog1 (send-super* :init :robot robot :joint-states-topic "/joint_states" :groupname "sciurus17_interface" args)
+   (prog1 (send-super* :init :robot robot :joint-states-topic "/robot/joint_states" :groupname "sciurus17_interface" args)
      (send self :add-controller :larm-controller)
      (send self :add-controller :rarm-controller)
      (send self :add-controller :head-controller)
