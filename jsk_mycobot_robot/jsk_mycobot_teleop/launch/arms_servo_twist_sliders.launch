@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- <node name="l_twist" pkg="slider_publisher" type="slider_publisher" output="screen" respawn="true"> -->
+    <!--     <param name="file" value="$(find pr2_simple_moveit_config)/config/l_twist_slider.yaml"/> -->
+    <!-- </node> -->
+  <arg name="config" default="$(find jsk_sciurus_teleop)/config/teleop/sciurus17_simulated_config.yaml"/>
+
+
+  <node name="servo_server" pkg="moveit_servo" type="servo_server" output="screen" >
+    <rosparam command="load" file="$(arg config)"/>
+  </node>
+
+    <node name="r_twist" pkg="slider_publisher" type="slider_publisher" output="screen" respawn="true">
+        <param name="file" value="$(find jsk_sciurus_teleop)/config/teleop/r_twist_slider.yaml"/>
+    </node>
+</launch>

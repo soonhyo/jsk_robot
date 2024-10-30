@@ -7,6 +7,8 @@
   <arg name="rviz" default="true" doc="Set true if you want RViz." />
   <arg name="moveit" default="false" doc="Set true if you want Moveit-based plan." />
 
+  <arg name="mode" default="dual_arm" doc="choose one, dual arm mode or teleoperation " />
+
   <!-- Driver -->
   <group ns="rarm">
     <include file="$(find jsk_mycobot_startup)/launch/mycobot_interface.launch" >
@@ -19,6 +21,7 @@
     <include file="$(find jsk_mycobot_startup)/launch/mycobot_interface.launch" >
       <arg name="port" value="$(arg port_2)" />
       <arg name="baud" value="$(arg baud_2)" />
+      <arg name="load_robot_state_publisher" value="false" />
     </include>
   </group>
 
