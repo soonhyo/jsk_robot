@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import os
+import fcntl
 import time
 import threading
 import math
@@ -19,9 +21,36 @@ from sensor_msgs.msg import JointState
 from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import Bool
 from std_srvs.srv import SetBool, SetBoolResponse, Empty, Trigger, TriggerResponse
+from mycobot_communication.srv import GetAngles, SetAngles, SetAnglesRequest
+from rospy import ServiceException
+
 import tf
 
 from pymycobot.mycobot import MyCobot
+
+def acquire_lock(lock_file):
+    """Acquire a file lock"""
+    open_mode = os.O_RDWR | os.O_CREAT | os.O_TRUNC
+    fd = os.open(lock_file, open_mode)
+
+    timeout = 50.0
+    start_time = current_time = time.time()
+    while current_time < start_time + timeout:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return fd
+        except (IOError, OSError):
+            time.sleep(0.01)
+            current_time = time.time()
+
+    os.close(fd)
+    return None
+
+def release_lock(fd):
+    """Release a file lock"""
+    if fd is not None:
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        os.close(fd)
 
 class MycobotInterface:
     def __init__(self):
@@ -31,10 +60,12 @@ class MycobotInterface:
         self.vel_rate = rospy.get_param("~vel_rate", 64.0)
         self.min_vel = rospy.get_param("~min_vel", 5)
 
+        # Create lock file path
+        self.lock_file = f"/tmp/mycobot_lock_{self.port.split('/')[-1]}"
+
         # Connect to MyCobot
         rospy.loginfo(f"Connecting to MyCobot on {self.port}, {self.baud}")
         self.mc = MyCobot(self.port, self.baud)
-        self.lock = threading.Lock()
 
         # Initialize state variables
         self.real_angles = None
@@ -43,14 +74,19 @@ class MycobotInterface:
         self.servo_on = True
         self.gripper_is_moving = False
         self.gripper_value = None
-        self.gripper_velocity = 80
+        self.gripper_velocity = 100
 
         # Setup publishers and subscribers
         self._setup_ros_interface()
 
         # Initialize MyCobot
-        self.mc.set_color(0, 255, 0)
-        self.mc.set_fresh_mode(1)
+        lock_fd = acquire_lock(self.lock_file)
+        if lock_fd is not None:
+            try:
+                self.mc.set_color(0, 255, 0)
+                self.mc.set_fresh_mode(1)
+            finally:
+                release_lock(lock_fd)
 
     def _setup_ros_interface(self):
         """Setup all ROS publishers, subscribers, services and action servers"""
@@ -167,7 +203,6 @@ class MycobotInterface:
         target_angles = np.array(segment['positions']) * 180 / np.pi
         actual_angles = np.array(self.real_angles)
 
-        # Calculate velocity
         if 'velocities' in segment:
             vel = int(np.max(np.abs(segment['velocities'])) * self.vel_rate)
             vel = max(vel, self.min_vel)
@@ -175,12 +210,13 @@ class MycobotInterface:
             duration = (segment['end_time'] - segment['start_time']).to_sec()
             vel = int(np.max(np.abs(target_angles - actual_angles)) / duration)
 
-        # Send command to robot
-        with self.lock:
-            self.mc.send_angles(target_angles.tolist(), vel)
-            rospy.sleep(0.08)
+        lock_fd = acquire_lock(self.lock_file)
+        if lock_fd is not None:
+            try:
+                self.mc.send_angles(target_angles.tolist(), vel)
+            finally:
+                release_lock(lock_fd)
 
-        # Monitor execution
         feedback = FollowJointTrajectoryFeedback()
         feedback.joint_names = goal.trajectory.joint_names
 
@@ -220,23 +256,55 @@ class MycobotInterface:
         return True
 
     def run(self):
-        rate = rospy.Rate(rospy.get_param("~joint_state_rate", 8))
+        rate = rospy.Rate(rospy.get_param("~joint_state_rate", 15))
+        # angles = self.mc.get_angles()
+
+        # waiting util server `get_joint_angles` enable.等待'get_joint_angles'服务启用
+        rospy.loginfo("wait service")
+        rospy.wait_for_service("get_joint_angles")
+
+        while True:
+            try:
+                func = rospy.ServiceProxy("get_joint_angles", GetAngles)
+                break
+            except ServiceException as e:
+                # pass
+                # print(f'error:{e}')
+                print("--------------error",e)
 
         while not rospy.is_shutdown():
+            res = func()
+            if res.joint_1 == res.joint_2 == res.joint_3 == 0.0:
+                continue
             # Get joint angles
-            with self.lock:
-                angles = self.mc.get_angles()
-            with self.lock:
-                gripper_state = [self.mc.get_gripper_value()]
-            if len(angles) == 6:
-                self.real_angles = angles
-                self._publish_joint_states()
+            lock_fd = acquire_lock(self.lock_file)
+            if lock_fd is not None:
+                try:
+                    gripper_state = [self.mc.get_gripper_value()]
+                finally:
+                    release_lock(lock_fd)
+
+            self.real_angles = [
+                res.joint_1 * (math.pi / 180),
+                res.joint_2 * (math.pi / 180),
+                res.joint_3 * (math.pi / 180),
+                res.joint_4 * (math.pi / 180),
+                res.joint_5 * (math.pi / 180),
+                res.joint_6 * (math.pi / 180),
+            ]
+            self._publish_joint_states()
             if gripper_state[0] > 0:
                 self._gripper_state = gripper_state
                 self._publish_gripper_state()
-            # Get atom button state
-            # button_state = Bool(data=not self.mc.get_digital_input(39))
-            # self.atom_button_pub.publish(button_state)
+
+            # lock_fd = acquire_lock(self.lock_file)
+            # if lock_fd is not None:
+            #     try:
+            #         button_state = Bool(data=not self.mc.get_digital_input(39))
+            #     finally:
+            #         release_lock(lock_fd)
+
+            #     self.atom_button_pub.publish(button_state)
 
             rate.sleep()
 
@@ -245,7 +313,7 @@ class MycobotInterface:
         msg = JointState()
         msg.header.stamp = rospy.get_rostime()
         msg.name = [f'joint{i+1}' for i in range(6)]
-        msg.position = [ang * math.pi / 180.0 for ang in self.real_angles]
+        msg.position = self.real_angles
         self.joint_angle_pub.publish(msg)
 
     def _publish_gripper_state(self):
@@ -259,16 +327,19 @@ class MycobotInterface:
         gripper_state = msg.position
         if gripper_state:
             self.gripper_state = gripper_state
-            with self.lock:
-                rospy.loginfo(f"gripper_state:{self.gripper_state}")
-                rospy.loginfo(f"_gripper_state:{self._gripper_state}")
-                self.mc.set_gripper_value(int(self.gripper_state[0]), self.gripper_velocity)
+            lock_fd = acquire_lock(self.lock_file)
+            if lock_fd is not None:
+                try:
+                    # rospy.loginfo(f"gripper_state:{self.gripper_state}")
+                    # rospy.loginfo(f"_gripper_state:{self._gripper_state}")
+                    self.mc.set_gripper_value(int(self.gripper_state[0]), self.gripper_velocity)
+                finally:
+                    release_lock(lock_fd)
 
     def joint_command_cb(self, msg):
         """Handle joint command messages"""
-        angles = list(self.real_angles or [0]*6)
+        angles = [0]*6
         vel = 100  # deg/s
-
         for n, p in zip(msg.name, msg.position):
             if 'joint' in n:
                 idx = int(n[-1]) - 1
@@ -276,11 +347,14 @@ class MycobotInterface:
                     angles[idx] = round(p * 180 / math.pi, 3)
                 else:
                     rospy.logwarn(f"{n} exceeds the limit: {p}")
+        lock_fd = acquire_lock(self.lock_file)
+        if lock_fd is not None:
+            try:
+                self.mc.send_angles(angles, vel)
+                # rospy.loginfo(f"angles: {angles}")
+            finally:
+                release_lock(lock_fd)
 
-        with self.lock:
-            self.mc.send_angles(angles, vel)
-            rospy.loginfo(f"angles: {angles}")
-            rospy.sleep(0.08)
 
     def joint_as_cb(self, goal):
         """Handle joint trajectory action goals"""
@@ -324,43 +398,64 @@ class MycobotInterface:
             )
             return
 
-        with self.lock:
-            self.mc.set_gripper_value(98 if goal_state == 0 else 35, 50)
-
-        rospy.sleep(0.05)  # Wait for gripper to start moving
+        lock_fd = acquire_lock(self.lock_file)
+        if lock_fd is not None:
+            try:
+                self.mc.set_gripper_value(98 if goal_state == 0 else 35, 50)
+            finally:
+                release_lock(lock_fd)
 
         while not rospy.is_shutdown() and self.mc.is_gripper_moving():
             if self.gripper_as.is_preempt_requested():
                 self.gripper_as.set_preempted()
                 return
 
-            self.gripper_as.publish_feedback(
-                GripperCommandFeedback(
-                    position=self.mc.get_gripper_value(),
-                    stalled=False
+            lock_fd = acquire_lock(self.lock_file)
+            if lock_fd is not None:
+                try:
+                    position = self.mc.get_gripper_value()
+                finally:
+                    release_lock(lock_fd)
+
+                self.gripper_as.publish_feedback(
+                    GripperCommandFeedback(
+                        position=position,
+                        stalled=False
+                    )
                 )
-            )
-            rospy.sleep(0.1)
+
+        lock_fd = acquire_lock(self.lock_file)
+        if lock_fd is not None:
+            try:
+                final_position = self.mc.get_gripper_value()
+            finally:
+                release_lock(lock_fd)
 
         self.gripper_as.set_succeeded(
             GripperCommandResult(
-                position=self.mc.get_gripper_value(),
+                position=final_position,
                 stalled=True,
                 reached_goal=True
             ),
             "Gripper action completed"
         )
 
+
     def set_servo_cb(self, req):
         """Handle servo state service calls"""
-        with self.lock:
-            if req.data:
-                self.mc.send_angles(self.real_angles, 0)
-                self.servo_on = True
-            else:
-                self.mc.release_all_servos()
-                self.servo_on = False
+        lock_fd = acquire_lock(self.lock_file)
+        if lock_fd is not None:
+            try:
+                if req.data:
+                    self.mc.send_angles(self.real_angles, 0)
+                    self.servo_on = True
+                else:
+                    self.mc.release_all_servos()
+                    self.servo_on = False
+            finally:
+                release_lock(lock_fd)
         return SetBoolResponse(True, "")
+
 
     def get_servo_cb(self, req):
         """Handle servo state query service calls"""
@@ -369,23 +464,29 @@ class MycobotInterface:
     def gripper_servo_cb(self, req):
         """Handle gripper servo state service calls"""
         try:
-            if req.data:  # Turn servo on
-                # Set encoder to current value to enable servo
+            if req.data:
                 if self.gripper_state is not None:
-                    with self.lock:
-                        if self.gripper_state:
-                            self.mc.set_gripper_value(self.gripper_state[0], self.gripper_velocity)
-                        else:
-                            self.gripper_state = [self.mc.get_gripper_value()]
-                            self.mc.set_gripper_value(self.gripper_state[0], self.gripper_velocity)
+                    lock_fd = acquire_lock(self.lock_file)
+                    if lock_fd is not None:
+                        try:
+                            if self.gripper_state:
+                                self.mc.set_gripper_value(self.gripper_state[0], self.gripper_velocity)
+                            else:
+                                self.gripper_state = [self.mc.get_gripper_value()]
+                                self.mc.set_gripper_value(self.gripper_state[0], self.gripper_velocity)
+                        finally:
+                            release_lock(lock_fd)
 
                 self.gripper_servo_on = True
                 rospy.loginfo("Gripper servo turned ON")
                 return SetBoolResponse(True, "Gripper servo turned ON")
-            else:  # Turn servo off
-                # Release gripper servo
-                with self.lock:
-                    self.mc.release_servo(7)
+            else:
+                lock_fd = acquire_lock(self.lock_file)
+                if lock_fd is not None:
+                    try:
+                        self.mc.release_servo(7)
+                    finally:
+                        release_lock(lock_fd)
                 self.gripper_servo_on = False
                 rospy.loginfo("Gripper servo turned OFF")
                 return SetBoolResponse(True, "Gripper servo turned OFF")
@@ -395,17 +496,24 @@ class MycobotInterface:
 
     def open_gripper_cb(self, _):
         """Handle open gripper service calls"""
-        with self.lock:
-            self.mc.set_gripper_value(98, 50)
-            rospy.sleep(0.1)
+        lock_fd = acquire_lock(self.lock_file)
+        if lock_fd is not None:
+            try:
+                self.mc.set_gripper_value(98, 50)
+            finally:
+                release_lock(lock_fd)
         return Empty()
 
     def close_gripper_cb(self, _):
         """Handle close gripper service calls"""
-        with self.lock:
-            self.mc.set_gripper_value(35, 50)
-            rospy.sleep(0.1)
+        lock_fd = acquire_lock(self.lock_file)
+        if lock_fd is not None:
+            try:
+                self.mc.set_gripper_value(35, 50)
+            finally:
+                release_lock(lock_fd)
         return Empty()
+
 
 if __name__ == "__main__":
     rospy.init_node("mycobot_topics")

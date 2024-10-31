@@ -30,7 +30,7 @@ class MyCobotRelay:
         rospy.init_node('mycobot_relay', anonymous=True)
 
         # Get parameters
-        self.control_rate = rospy.get_param('~control_rate', 8)  # Hz
+        self.control_rate = rospy.get_param('~control_rate', 15)  # Hz
 
         # Initialize state
         self.last_gripper_position = None
@@ -48,14 +48,14 @@ class MyCobotRelay:
         """Setup ROS publishers, subscribers and action clients"""
         # Publisher for right arm commands
         self.joint_cmd_pub = rospy.Publisher(
-            '/rarm/joint_command',
+            '/slave/joint_command',
             JointState,
             queue_size=10
         )
 
         # Subscriber for left arm joint states
         self.joint_state_sub = rospy.Subscriber(
-            '/larm/joint_states',
+            '/master/joint_states',
             JointState,
             self.joint_state_callback,
             queue_size=10
@@ -63,24 +63,24 @@ class MyCobotRelay:
 
         # Subscriber for left arm gripper state
         self.left_gripper_sub = rospy.Subscriber(
-            '/larm/gripper_state',
+            '/master/gripper_state',
             JointState,
             self.left_gripper_state_cb
         )
 
         # Publisher for right arm gripper command
         self.right_gripper_pub = rospy.Publisher(
-            '/rarm/gripper_command',
+            '/slave/gripper_command',
             JointState,
             queue_size=5)
 
     def initialize_left_arm(self):
         """Initialize left arm with servo off"""
         try:
-            rospy.wait_for_service('/larm/set_servo')
-            set_servo = rospy.ServiceProxy('/larm/set_servo', SetBool)
-            rospy.wait_for_service('/larm/set_gripper_servo')
-            set_gripper_servo = rospy.ServiceProxy('/larm/set_gripper_servo', SetBool)
+            rospy.wait_for_service('/master/set_servo')
+            set_servo = rospy.ServiceProxy('/master/set_servo', SetBool)
+            rospy.wait_for_service('/master/set_gripper_servo')
+            set_gripper_servo = rospy.ServiceProxy('/master/set_gripper_servo', SetBool)
 
             req = SetBoolRequest(data=False)
             response1 = set_servo(req)

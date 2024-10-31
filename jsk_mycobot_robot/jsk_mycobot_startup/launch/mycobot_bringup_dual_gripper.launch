@@ -11,7 +11,7 @@
 
   <!-- Driver -->
   <group ns="master">
-    <include file="$(find jsk_mycobot_startup)/launch/mycobot_interface.launch" >
+    <include file="$(find jsk_mycobot_startup)/launch/mycobot_interface_gripper.launch" >
         <arg name="port" value="$(arg port_1)" />
         <arg name="baud" value="$(arg baud_1)" />
         <arg name="rviz" value="false" />
@@ -20,7 +20,7 @@
   </group>
 
   <group ns="slave">
-    <include file="$(find jsk_mycobot_startup)/launch/mycobot_interface.launch" >
+    <include file="$(find jsk_mycobot_startup)/launch/mycobot_interface_gripper.launch" >
       <arg name="port" value="$(arg port_2)" />
       <arg name="baud" value="$(arg baud_2)" />
       <arg name="rviz" value="$(arg rviz)" />
@@ -32,4 +32,5 @@
   <include if="$(arg moveit)" file="$(find mycobot_280_moveit)/launch/move_group.launch" >
     <arg name="info" value="true" />
   </include>
+
 </launch>
