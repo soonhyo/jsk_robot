@@ -30,7 +30,9 @@ class MyCobotRelay:
         rospy.init_node('mycobot_relay', anonymous=True)
 
         # Get parameters
-        self.control_rate = rospy.get_param('~control_rate', 15)  # Hz
+        self.control_rate = rospy.get_param('~control_rate', 8)  # Hz
+        self.cmd_msg = None
+        self.gripper_msg = None
 
         # Initialize state
         self.last_gripper_position = None
@@ -50,7 +52,7 @@ class MyCobotRelay:
         self.joint_cmd_pub = rospy.Publisher(
             '/slave/joint_command',
             JointState,
-            queue_size=10
+            queue_size=1
         )
 
         # Subscriber for left arm joint states
@@ -58,21 +60,22 @@ class MyCobotRelay:
             '/master/joint_states',
             JointState,
             self.joint_state_callback,
-            queue_size=10
+            queue_size=1
         )
 
         # Subscriber for left arm gripper state
-        self.left_gripper_sub = rospy.Subscriber(
+        self.master_gripper_sub = rospy.Subscriber(
             '/master/gripper_state',
             JointState,
-            self.left_gripper_state_cb
+            self.left_gripper_state_cb,
+            queue_size=1
         )
 
         # Publisher for right arm gripper command
-        self.right_gripper_pub = rospy.Publisher(
+        self.slave_gripper_pub = rospy.Publisher(
             '/slave/gripper_command',
             JointState,
-            queue_size=5)
+            queue_size=1)
 
     def initialize_left_arm(self):
         """Initialize left arm with servo off"""
@@ -129,7 +132,7 @@ class MyCobotRelay:
                 msg = JointState()
                 msg.position = current_position
                 # Send goal with callbacks
-                self.right_gripper_pub.publish(msg)
+                self.gripper_msg = msg
 
                 rospy.loginfo(f"Mirroring gripper position: {current_position}")
                 self.last_gripper_position = current_position
@@ -169,7 +172,7 @@ class MyCobotRelay:
             if msg.effort and len(msg.effort) == len(limited_angles):
                 cmd_msg.effort = msg.effort
 
-            self.joint_cmd_pub.publish(cmd_msg)
+            self.cmd_msg = cmd_msg
 
         except Exception as e:
             rospy.logerr(f"Error in joint state callback: {e}")
@@ -180,6 +183,11 @@ class MyCobotRelay:
 
         rospy.loginfo("Starting MyCobot relay node...")
         while not rospy.is_shutdown():
+            if self.cmd_msg is not None:
+                self.joint_cmd_pub.publish(self.cmd_msg)
+            if self.gripper_msg is not None:
+                self.slave_gripper_pub.publish(self.gripper_msg)
+
             rate.sleep()
 
 if __name__ == "__main__":

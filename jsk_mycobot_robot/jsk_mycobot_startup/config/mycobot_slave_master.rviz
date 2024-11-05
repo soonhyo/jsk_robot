@@ -6,6 +6,7 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
+        - /RobotModel1
         - /TF1/Frames1
         - /MotionPlanning1/Planning Request1
         - /MotionPlanning1/Planned Path1
@@ -101,7 +102,7 @@ Visualization Manager:
           Show Trail: false
           Value: true
       Name: RobotModel
-      Robot Description: robot_description
+      Robot Description: /master/robot_description
       TF Prefix: ""
       Update Interval: 0
       Value: true
@@ -431,4 +432,4 @@ Window Geometry:
     collapsed: false
   Width: 1386
   X: 14
-  Y: 99
+  Y: 0

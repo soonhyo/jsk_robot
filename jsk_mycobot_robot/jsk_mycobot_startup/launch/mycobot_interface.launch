@@ -2,6 +2,11 @@
   <arg name="port" default="/dev/ttyUSB0" doc ="the serial port for connection" />
   <arg name="baud" default="115200" doc ="the serial baudrate" />
   <arg name="robot_type" default="mycobot"/>
+  <arg name="get_angles" default="true"/>
+  <arg name="get_gripper" default="true"/>
+  <arg name="get_atom_button" default="false"/>
+  <arg name="set_angles" default="true"/>
+  <arg name="set_gripper" default="true"/>
   <arg name="load_robot_state_publisher" default="true"/>
   <arg name="urdf_path" default="$(find mycobot_description)/urdf/$(arg robot_type)/mycobot.urdf.xacro"/>
   <arg name="rviz" default="true" />
@@ -13,6 +18,11 @@
   <node pkg="jsk_mycobot_startup" type="mycobot_interface.py" name="$(anon mycobot_bridge)"  output="screen" >
     <param name="port" value="$(arg port)" />
     <param name="baud" value="$(arg baud)" />
+    <param name="get_angles" value="$(arg get_angles)" />
+    <param name="get_gripper" value="$(arg get_gripper)" />
+    <param name="get_atom_button" value="$(arg get_atom_button)" />
+    <param name="set_angles" value="$(arg set_angles)" />
+    <param name="set_gripper" value="$(arg set_gripper)" />
     <param name="model" value="$(arg robot_type)" />
   </node>
   <node name="mycobot_services_getter" pkg="mycobot_communication" type="mycobot_services_getter.py" output="screen">

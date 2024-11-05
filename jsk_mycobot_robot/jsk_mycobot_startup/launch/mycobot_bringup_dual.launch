@@ -14,6 +14,10 @@
     <include file="$(find jsk_mycobot_startup)/launch/mycobot_interface.launch" >
         <arg name="port" value="$(arg port_1)" />
         <arg name="baud" value="$(arg baud_1)" />
+        <arg name="get_angles" value="true" />
+        <arg name="get_gripper" value="true" />
+        <arg name="set_angles" value="false" />
+        <arg name="set_gripper" value="false" />
         <arg name="rviz" value="false" />
         <arg name="load_robot_state_publisher" value="false" />
     </include>
@@ -23,6 +27,10 @@
     <include file="$(find jsk_mycobot_startup)/launch/mycobot_interface.launch" >
       <arg name="port" value="$(arg port_2)" />
       <arg name="baud" value="$(arg baud_2)" />
+      <arg name="get_angles" value="false" />
+      <arg name="get_gripper" value="false" />
+      <arg name="set_angles" value="true" />
+      <arg name="set_gripper" value="true" />
       <arg name="rviz" value="$(arg rviz)" />
       <arg name="rvizconfig" value="$(find jsk_mycobot_startup)/config/mycobot_slave_master.rviz" />
     </include>
