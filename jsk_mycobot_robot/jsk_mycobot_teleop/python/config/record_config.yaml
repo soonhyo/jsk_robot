@@ -1,0 +1,8 @@
+# config/record_config.yaml
+topics:
+  - /master/joint_states
+  - /master/gripper_state
+  - /tf
+  - /tf_static
+
+save_path: "/tmp/rosbag/"
