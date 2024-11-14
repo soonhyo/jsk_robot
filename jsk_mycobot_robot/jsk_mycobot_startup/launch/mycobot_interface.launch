@@ -3,10 +3,10 @@
   <arg name="baud" default="115200" doc ="the serial baudrate" />
   <arg name="robot_type" default="mycobot"/>
   <arg name="get_angles" default="true"/>
-  <arg name="get_gripper" default="true"/>
+  <arg name="get_gripper" default="false"/>
   <arg name="get_atom_button" default="false"/>
   <arg name="set_angles" default="true"/>
-  <arg name="set_gripper" default="true"/>
+  <arg name="set_gripper" default="false"/>
   <arg name="load_robot_state_publisher" default="true"/>
   <arg name="urdf_path" default="$(find mycobot_description)/urdf/$(arg robot_type)/mycobot.urdf.xacro"/>
   <arg name="rviz" default="true" />

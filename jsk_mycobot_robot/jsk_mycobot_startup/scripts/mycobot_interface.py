@@ -78,9 +78,9 @@ class MycobotInterface:
         self.gripper_velocity = 100
 
         self.get_angles = rospy.get_param("~get_angles", True)
-        self.get_gripper = rospy.get_param("~get_gripper", True)
+        self.get_gripper = rospy.get_param("~get_gripper", False)
         self.set_angles = rospy.get_param("~set_angles", True)
-        self.set_gripper = rospy.get_param("~set_gripper", True)
+        self.set_gripper = rospy.get_param("~set_gripper", False)
         self.get_atom_button = rospy.get_param("~get_atom_button", False)
 
         # Setup publishers and subscribers
@@ -232,7 +232,7 @@ class MycobotInterface:
         feedback = FollowJointTrajectoryFeedback()
         feedback.joint_names = goal.trajectory.joint_names
 
-        rate = rospy.Rate(10)
+        rate = rospy.Rate(5)
         while rospy.Time.now() < segment['end_time']:
             if self.joint_as.is_preempt_requested():
                 self.joint_as.set_preempted()
@@ -268,7 +268,7 @@ class MycobotInterface:
         return True
 
     def run(self):
-        rate = rospy.Rate(rospy.get_param("~joint_state_rate", 8))
+        rate = rospy.Rate(rospy.get_param("~joint_state_rate", 5))
 
         while not rospy.is_shutdown():
             if self.get_angles:
