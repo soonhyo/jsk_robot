@@ -226,6 +226,7 @@ class MycobotInterface:
         if lock_fd is not None:
             try:
                 self.mc.send_angles(target_angles.tolist(), vel)
+                time.sleep(0.08)
             finally:
                 release_lock(lock_fd)
 
