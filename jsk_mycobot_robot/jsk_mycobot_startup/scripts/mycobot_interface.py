@@ -67,7 +67,7 @@ class MycobotInterface:
 
         # Connect to MyCobot
         rospy.loginfo(f"Connecting to MyCobot on {self.port}, {self.baud}")
-        self.mc = MyCobot(self.port, self.baud)
+        self.mc = MyCobot(self.port)
         self.mc.set_color(255, 0, 0)
 
         # Initialize state variables
@@ -96,6 +96,17 @@ class MycobotInterface:
                 self.mc.set_color(255, 0, 255)
             finally:
                 release_lock(lock_fd)
+
+        self._joint_state_pub = rospy.Publisher('joint_states', JointState, queue_size=10)
+
+    def _publish_joint_state(self):
+        # Get current joint states
+        joint_state_msg = JointState()
+
+        joint_state_msg.position = self.real_angles
+        joint_state_msg.header.stamp = rospy.get_rostime()
+        joint_state_msg.name = [f'joint{i+1}' for i in range(6)]
+        self._joint_state_pub.publish(joint_state_msg)
 
     def _setup_ros_interface(self):
         """Setup all ROS publishers, subscribers, services and action servers"""
@@ -225,13 +236,15 @@ class MycobotInterface:
             # vel = int(np.max(np.abs(target_angles - actual_angles)) / duration)
             vel = 100
 
-        lock_fd = acquire_lock(self.lock_file)
-        if lock_fd is not None:
-            try:
-                self.mc.send_angles(target_angles.tolist(), vel)
-                time.sleep(DELAY_TIME)
-            finally:
-                release_lock(lock_fd)
+        # Only lock for sending angles
+        self.mc.send_angles(target_angles.tolist(), vel)
+        time.sleep(DELAY_TIME)
+
+        # lock_fd = acquire_lock(self.lock_file)
+        # if lock_fd is not None:
+        #     try:
+            # finally:
+            #     release_lock(lock_fd)
 
         feedback = FollowJointTrajectoryFeedback()
         feedback.joint_names = goal.trajectory.joint_names
@@ -242,10 +255,17 @@ class MycobotInterface:
                 self.joint_as.set_preempted()
                 return False
 
-            actual_angles = np.array(self.real_angles)
+                joint_state_msg = JointState()
+
+                actual_angles = np.array(self.real_angles)
+                joint_state_msg.position = self.real_angles
+                joint_state_msg.header.stamp = rospy.get_rostime()
+                joint_state_msg.name = [f'joint{i+1}' for i in range(6)]
+                self._joint_state_pub.publish(joint_state_msg)
+
             feedback.header.stamp = rospy.Time.now()
             feedback.desired.positions = (target_angles / 180 * np.pi).tolist()
-            feedback.actual.positions = (actual_angles / 180 * np.pi).tolist()
+            feedback.actual.positions = self.real_angles
             feedback.error.positions = ((target_angles - actual_angles) / 180 * np.pi).tolist()
             self.joint_as.publish_feedback(feedback)
 
@@ -287,7 +307,8 @@ class MycobotInterface:
                     res.joint_5 * (math.pi / 180),
                     res.joint_6 * (math.pi / 180),
                 ]
-                self._publish_joint_states()
+
+                self._publish_joint_state()
 
             if self.get_gripper:
                 lock_fd = acquire_lock(self.lock_file)
@@ -452,7 +473,7 @@ class MycobotInterface:
         if lock_fd is not None:
             try:
                 if req.data:
-                    self.mc.send_angles(self.real_angles, 0)
+                    self.mc.send_angles(self.real_angles, 1)
                     self.servo_on = True
                 else:
                     self.mc.release_all_servos()
