@@ -28,6 +28,8 @@ import tf
 
 from pymycobot.mycobot import MyCobot
 
+DELAY_TIME = 0.08
+
 def acquire_lock(lock_file):
     """Acquire a file lock"""
     open_mode = os.O_RDWR | os.O_CREAT | os.O_TRUNC
@@ -220,21 +222,22 @@ class MycobotInterface:
             vel = max(vel, self.min_vel)
         else:
             duration = (segment['end_time'] - segment['start_time']).to_sec()
-            vel = int(np.max(np.abs(target_angles - actual_angles)) / duration)
+            # vel = int(np.max(np.abs(target_angles - actual_angles)) / duration)
+            vel = 100
 
         lock_fd = acquire_lock(self.lock_file)
         if lock_fd is not None:
             try:
                 self.mc.send_angles(target_angles.tolist(), vel)
-                time.sleep(0.08)
+                time.sleep(DELAY_TIME)
             finally:
                 release_lock(lock_fd)
 
         feedback = FollowJointTrajectoryFeedback()
         feedback.joint_names = goal.trajectory.joint_names
 
-        rate = rospy.Rate(5)
-        while rospy.Time.now() < segment['end_time']:
+        rate = rospy.Rate(10)
+        while rospy.Time.now() < segment['end_time'] + rospy.Duration(DELAY_TIME):
             if self.joint_as.is_preempt_requested():
                 self.joint_as.set_preempted()
                 return False
@@ -269,7 +272,7 @@ class MycobotInterface:
         return True
 
     def run(self):
-        rate = rospy.Rate(rospy.get_param("~joint_state_rate", 5))
+        rate = rospy.Rate(rospy.get_param("~joint_state_rate", 10))
 
         while not rospy.is_shutdown():
             if self.get_angles:
