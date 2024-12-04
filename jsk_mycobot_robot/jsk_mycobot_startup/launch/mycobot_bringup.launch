@@ -5,6 +5,7 @@
   <arg name="moveit" default="false" doc="Set true if you want Moveit-based plan." />
   <arg name="mycobot_debug" default="false" doc="Set true if you want to check mycobot comm and others"/>
   <arg name="camera_ns" default="camera" />
+  <arg name="publish_tf" default="true" />
 
   <!-- Driver -->
   <include file="$(find jsk_mycobot_startup)/launch/mycobot_interface.launch" >
@@ -19,7 +20,11 @@
 
   <!-- <node name="atom_button_servo_switch" pkg="mycobot_280" type="atom_button_listener.py"/> -->
   <node name="realsense_transform_publisher" pkg="tf" type="static_transform_publisher"
-        args="-0.030 0.128 0.315 -1.5707 0.3425 0.0 link1 $(arg camera_ns)_link 100" />
+        args="0.02400000000000001, 0.148, 0.312 0.14012993  0.04633797 -0.71303378  0.68541901 link1 $(arg camera_ns)_link 100" if="$(arg publish_tf)"/>
+        <!-- args="-0.06 0.145 0.295 0.08903098 0.08903956 -0.70144517 0.70151274 link1 $(arg camera_ns)_link 100" if="$(arg publish_tf)"/> -->
+        <!-- args="0.047 0.133 0.33199999999999996 0.16612985  0.15681494 -0.68884931  0.68796554 link1 $(arg camera_ns)_link 100" if="$(arg publish_tf)"/> -->
+        <!-- args="0.048, 0.118, 0.36 0.12094 0.12094 -0.6968 0.6968 link1 $(arg camera_ns)_link 100" if="$(arg publish_tf)"/> -->
+        <!-- args="0.03, 0.127, 0.381 0.121 0.121 -0.697 0.697 link1 $(arg camera_ns)_link 100" if="$(arg publish_tf)"/> -->
         <!-- args="-0.030 0.128 0.315 -1.5707 0.0 0.0 link1 $(arg camera_ns)_link 100" /> -->
 
   <!-- Rviz -->

@@ -102,7 +102,6 @@ class MycobotInterface:
     def _publish_joint_state(self):
         # Get current joint states
         joint_state_msg = JointState()
-
         joint_state_msg.position = self.real_angles
         joint_state_msg.header.stamp = rospy.get_rostime()
         joint_state_msg.name = [f'joint{i+1}' for i in range(6)]
@@ -250,7 +249,7 @@ class MycobotInterface:
         feedback.joint_names = goal.trajectory.joint_names
 
         rate = rospy.Rate(10)
-        while rospy.Time.now() < segment['end_time'] + rospy.Duration(DELAY_TIME):
+        while rospy.Time.now() < segment['end_time']:
             if self.joint_as.is_preempt_requested():
                 self.joint_as.set_preempted()
                 return False
@@ -296,19 +295,22 @@ class MycobotInterface:
 
         while not rospy.is_shutdown():
             if self.get_angles:
-                res = self.get_angles_srv()
-                if res.joint_1 == res.joint_2 == res.joint_3 == 0.0:
-                    continue
-                self.real_angles = [
-                    res.joint_1 * (math.pi / 180),
-                    res.joint_2 * (math.pi / 180),
-                    res.joint_3 * (math.pi / 180),
-                    res.joint_4 * (math.pi / 180),
-                    res.joint_5 * (math.pi / 180),
-                    res.joint_6 * (math.pi / 180),
-                ]
-
-                self._publish_joint_state()
+                # res = self.get_angles_srv()
+                # if res.joint_1 == res.joint_2 == res.joint_3 == 0.0:
+                #     continue
+                # self.real_angles = [
+                #     res.joint_1 * (math.pi / 180),
+                #     res.joint_2 * (math.pi / 180),
+                #     res.joint_3 * (math.pi / 180),
+                #     res.joint_4 * (math.pi / 180),
+                #     res.joint_5 * (math.pi / 180),
+                #     res.joint_6 * (math.pi / 180),
+                # ]
+                angles = self.mc.get_angles()
+                if angles:
+                    self.real_angles = (np.array(angles) / 180 * np.pi).tolist()
+                    rospy.loginfo(f"real_angles:{self.real_angles}")
+                    self._publish_joint_state()
 
             if self.get_gripper:
                 lock_fd = acquire_lock(self.lock_file)
@@ -473,7 +475,8 @@ class MycobotInterface:
         if lock_fd is not None:
             try:
                 if req.data:
-                    self.mc.send_angles(self.real_angles, 1)
+                    angles = (np.array(self.real_angles) / np.pi * 180).tolist()
+                    self.mc.send_angles(angles, 1)
                     self.servo_on = True
                 else:
                     self.mc.release_all_servos()
