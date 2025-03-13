@@ -30,18 +30,13 @@ angle-vector:
 
 head-end-coords:
   parent: camera_link
-  translate: [0, 0, 0.05]
-  rotate: [0.5, -0.5, 0.5, 120]
+  translate: [0, 0, 0]
 torso-end-coords:
   parent: chest_camera_link
-  translate: [0, 0, 0.05]
-  rotate: [0.5, -0.5, 0.5, 120]
+  translate: [0, 0, 0]
 rarm-end-coords:
   parent: r_link7
-  translate: [0, 0, 0.05]
-  rotate: [0.5, -0.5, 0.5, 120]
+  translate: [0, 0, 0]
 larm-end-coords:
   parent: l_link7
-  translate: [0, 0, 0.05]
-  rotate: [0.5, -0.5, 0.5, 120]
-
+  translate: [0, 0, 0]

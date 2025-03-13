@@ -111,9 +111,10 @@
   (:init (&rest args)
     (send-super* :init args)
     ;; add chest and remove base from all links
-    (setq collision-avoidance-links (remove-if #'(lambda (x) (string= (send x :name) "base_link")) (append (list (send self :chest_link)) (send self :links))))
-    (setq larm-collision-avoidance-links collision-avoidance-links)
-    (setq rarm-collision-avoidance-links collision-avoidance-links)
+    (setq collision-avoidance-links (remove-if #'(lambda (x) (string= (send x :name) "world")) (send self :links)))
+
+    ;; (setq larm-collision-avoidance-links collision-avoidance-links)
+    ;; (setq rarm-collision-avoidance-links collision-avoidance-links)
     ;; Set max joint velocities (you may need to adjust these values)
     (send (send self :l_arm_joint1) :max-joint-velocity 1)
     (send (send self :l_arm_joint2) :max-joint-velocity 1)

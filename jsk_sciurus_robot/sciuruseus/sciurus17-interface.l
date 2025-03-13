@@ -12,7 +12,7 @@
                 ((:moveit-robot mvit-rb) (instance sciurus17-robot :init))
                 ((:robot robot) sciurus17-robot)
                 &allow-other-keys)
-   (prog1 (send-super* :init :robot robot :joint-states-topic "/robot/joint_states" :groupname "sciurus17_interface" args)
+   (prog1 (send-super* :init :robot robot :joint-states-topic "/joint_states" :groupname "sciurus17_interface" args)
      (send self :add-controller :larm-controller)
      (send self :add-controller :rarm-controller)
      (send self :add-controller :head-controller)
@@ -87,7 +87,6 @@
      (cons :action-type control_msgs::FollowJointTrajectoryAction)
      (cons :joint-names (list "waist_yaw_joint")))))
 
-
   (:start-grasp
    (&optional (arm :arms) &key (effort 50) (wait t))
    (send self :go-grasp arm :pos 0 :effort effort :wait wait))
@@ -116,6 +115,20 @@
      (dolist (client clients)
        (push (send client :get-result) results))
      results))
+
+  (:angle-vector-raw (av &optional (tm :fast) (ctype controller-type) (start-time 0)
+                         &key (scale 2.2) (min-time 0.05) (end-coords-interpolation nil)
+                         &allow-other-keys)
+    (send self :angle-vector-sequence-raw (list av) (list tm) ctype start-time :scale scale :min-time min-time
+          :end-coords-interpolation end-coords-interpolation))
+  (:angle-vector-sequence-raw (avs &optional (tms :fast) (ctype controller-type) (start-time 0)
+                                   &key (scale 2.2) (min-time 0.05) (end-coords-interpolation nil)
+                                   &allow-other-keys)
+    ;; force add current position to the top of avs
+    (if (atom tms) (setq tms (list tms)))
+    (setq ctype (or ctype controller-type))  ;; use default if ctype is nil
+    (send-super :angle-vector-sequence avs tms ctype start-time :scale scale :min-time min-time
+                :end-coords-interpolation end-coords-interpolation))
 
   (:ros-state-callback
    (msg)
@@ -161,7 +174,7 @@
                                          (send robot :larm :joint-list))))
          )))
 
-(defun sciurus-init (&key (type :default-controller) (moveit t))
+(defun sciurus-init (&key (safe t) (type :default-controller) (moveit t))
   (let (mvit-env mvit-rb)
     (when moveit
       (setq mvit-env (instance sciurus17-moveit-environment))
@@ -171,6 +184,8 @@
                              :moveit-environment mvit-env
                              :moveit-robot mvit-rb)))
     (if (not (boundp '*sciurus*)) ;; changed the robot name for convenience
-        (setq *sciurus* (instance sciurus17-robot :init)))))
+        (if safe
+            (setq *sciurus* (instance sciurus17-robot-safe :init))
+            (setq *sciurus* (instance sciurus17-robot :init))))))
 
 (provide :sciurus17-interface)

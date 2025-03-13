@@ -10,7 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
   ${ROSEUS_package} # required in indigo
   collada_urdf
   euscollada
-#  sciurus17_description
+  sciurus17_description
 )
 
 catkin_package(
@@ -37,15 +37,15 @@ message("sciurus17_urdf: ${_sciurus17_urdf}")
 message("urdf_to_collada: ${_urdf_to_collada}")
 message("collada2eus: ${_collada2eus}")
 
-add_custom_command(OUTPUT ${PROJECT_SOURCE_DIR}/sciurus17.urdf
-  COMMAND xacro ${_sciurus17_urdf}/sciurus17.urdf.xacro > ${PROJECT_SOURCE_DIR}/sciurus17.urdf
-  DEPENDS ${_sciurus17_urdf}/sciurus17.urdf.xacro)
+# add_custom_command(OUTPUT ${PROJECT_SOURCE_DIR}/sciurus17.urdf
+#   COMMAND xacro ${_sciurus17_urdf}/sciurus17.urdf.xacro > ${PROJECT_SOURCE_DIR}/sciurus17.urdf
+#   DEPENDS ${_sciurus17_urdf}/sciurus17.urdf.xacro)
 
 if(NOT EXISTS ${PROJECT_SOURCE_DIR}/sciurus17.l)
   add_custom_command(OUTPUT ${PROJECT_SOURCE_DIR}/sciurus17.dae
-    COMMAND echo "${_urdf_to_collada} ${PROJECT_SOURCE_DIR}/sciurus17.urdf sciurus17.dae"
-    COMMAND ${_urdf_to_collada} ${PROJECT_SOURCE_DIR}/sciurus17.urdf ${PROJECT_SOURCE_DIR}/sciurus17.dae
-    DEPENDS ${PROJECT_SOURCE_DIR}/sciurus17.urdf)
+    COMMAND echo "${_urdf_to_collada} ${PROJECT_SOURCE_DIR}/sciurus17_reduced.urdf sciurus17.dae"
+    COMMAND ${_urdf_to_collada} ${PROJECT_SOURCE_DIR}/sciurus17_reduced.urdf ${PROJECT_SOURCE_DIR}/sciurus17.dae
+    DEPENDS ${PROJECT_SOURCE_DIR}/sciurus17_reduced.urdf)
 
   add_custom_command(OUTPUT ${PROJECT_SOURCE_DIR}/sciurus17.l
     COMMAND echo "${_collada2eus} sciurus17.dae sciurus17.l"
