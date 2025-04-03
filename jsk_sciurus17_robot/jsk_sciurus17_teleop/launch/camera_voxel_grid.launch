@@ -1,0 +1,50 @@
+<launch>
+
+  <arg name="gui" default="false" />
+  <arg name="test" default="false" />
+  <arg name="topic_ns" default="/camera/depth_registered/points" />
+
+  <arg name="leaf_size" default="0.01" />
+  <arg name="depth_min" default="0.01" />
+  <arg name="depth_max" default="2.0" />
+
+  <!-- <node name="pcd_to_pointcloud"
+        pkg="pcl_ros" type="pcd_to_pointcloud"
+        args="$(find pcl_ros)/samples/data/table_scene_lms400.pcd 0.033">
+    <remap from="cloud_pcd" to="points" />
+  </node> -->
+
+  <node name="voxel_grid"
+        pkg="nodelet" type="nodelet"
+        args="standalone pcl/VoxelGrid">
+    <remap from="~input" to="$(arg topic_ns)" />
+    <rosparam subst_value="true">
+      filter_field_name: z
+      filter_limit_min: $(arg depth_min)
+      filter_limit_max: $(arg depth_max)
+      filter_limit_negative: False
+      leaf_size: $(arg leaf_size)
+    </rosparam>
+  </node>
+
+  <group if="$(arg test)">
+    <test test-name="test_voxel_grid"
+          name="test_voxel_grid"
+          pkg="rostest" type="hztest">
+      <rosparam>
+        topic: /voxel_grid/output
+        hz: 20
+        hzerror: 15
+        test_duration: 5.0
+      </rosparam>
+    </test>
+  </group>
+
+  <group if="$(arg gui)">
+    <node name="rviz"
+          pkg="rviz" type="rviz"
+          args="-d $(find pcl_ros)/samples/pcl_ros/filters/config/camera_voxel_grid.rviz">
+    </node>
+  </group>
+
+</launch>
