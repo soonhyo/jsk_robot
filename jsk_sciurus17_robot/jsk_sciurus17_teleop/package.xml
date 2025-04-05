@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>jsk_sciurus_teleop</name>
+  <name>jsk_sciurus17_teleop</name>
   <version>0.0.0</version>
-  <description>The jsk_sciurus_teleop package</description>
+  <description>The jsk_sciurus17_teleop package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->

@@ -32,7 +32,7 @@
                 :debug-view nil
                 :revert-if-fail nil
                 :periodic-time 0.5
-                :check-collision t))
+                :check-collision nil))
     (update-robot-state)
     (send *ri* :angle-vector-raw (send *sciurus17* :angle-vector) :fast :rarm-controller 0.0 :min-time 0.3)
     )
@@ -52,7 +52,7 @@
                 :debug-view nil
                 :revert-if-fail nil
                 :periodic-time 0.5
-                :check-collision t))
+                :check-collision nil))
     (update-robot-state)
     (send *ri* :angle-vector-raw (send *sciurus17* :angle-vector) :fast :larm-controller 0.0 :min-time 0.3)
     )
@@ -93,7 +93,7 @@
   (ros::ros-info "Received left hand target: ~A" *l-hand-target*)
   (let ((mapped-value (* *l-hand-target* 10)))
     (ros::ros-info "Mapped left hand value: ~A" (- mapped-value))
-    (send *sciurus17* :lhand :angle-vector (float-vector mapped-value)))
+    (send *sciurus17* :lhand :angle-vector (float-vector (- mapped-value))))
   (update-robot-state)
   (send *ri* :go-grasp :larm :pos (/ (elt (send *sciurus17* :lhand :angle-vector) 0) 10) :effort 3 :wait nil))
 
