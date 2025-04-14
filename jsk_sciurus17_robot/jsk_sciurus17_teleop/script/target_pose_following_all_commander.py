@@ -1,9 +1,11 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+
 import rospy
 import numpy as np
 import time
+import sys
+import moveit_commander
 from moveit_commander import MoveGroupCommander, RobotCommander
-from moveit_msgs.srv import GetPositionIK, GetPositionIKRequest
 from std_msgs.msg import Float32, Header, String
 from geometry_msgs.msg import PoseStamped, Quaternion
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
@@ -13,7 +15,7 @@ from control_msgs.msg import (
     GripperCommandGoal
 )
 import threading
-import tf.transformations as tf_trans  # Quaternion 변환을 위해
+import tf.transformations as tf_trans
 import actionlib
 
 CONTROL_R = 0
@@ -24,17 +26,21 @@ MIN_GRIPPER_ANGLE = 0.0
 
 class Sciurus17FastIK:
     def __init__(self):
-        # 팔 그룹 초기화 (IK 사용)
+        # Initialize moveit_commander
+        moveit_commander.roscpp_initialize(sys.argv)
+
+        # Arm groups initialization
         self.r_arm_group = MoveGroupCommander("r_arm_group")
         self.l_arm_group = MoveGroupCommander("l_arm_group")
-        # 그리퍼 액션 클라이언트 초기화
+
+        # Gripper action clients
         self._clientR = actionlib.SimpleActionClient("/sciurus17/controller1/right_hand_controller/gripper_cmd", GripperCommandAction)
         self._clientL = actionlib.SimpleActionClient("/sciurus17/controller2/left_hand_controller/gripper_cmd", GripperCommandAction)
 
         self._goalR = GripperCommandGoal()
         self._goalL = GripperCommandGoal()
 
-        # 액션 서버 대기
+        # Wait for action servers
         self._clientR.wait_for_server(rospy.Duration(5.0))
         if not self._clientR.wait_for_server(rospy.Duration(5.0)):
             rospy.logerr("Exiting - Gripper R Action Server Not Found")
@@ -50,8 +56,9 @@ class Sciurus17FastIK:
         self.clear()
 
         self.robot = RobotCommander()
+        self.robot_state = self.robot.get_current_state()
 
-        # 퍼블리셔 설정
+        # Publishers
         self.r_arm_pub = rospy.Publisher(
             "/sciurus17/controller1/right_arm_controller/command",
             JointTrajectory,
@@ -73,11 +80,7 @@ class Sciurus17FastIK:
             queue_size=1
         )
 
-        # IK 서비스 (팔에만 사용)
-        rospy.wait_for_service('/compute_ik')
-        self.ik_service = rospy.ServiceProxy('/compute_ik', GetPositionIK)
-
-        # 타겟 포즈 구독
+        # Subscribers
         rospy.Subscriber("/right_wrist_target_pose", PoseStamped, self.r_arm_target_pose_callback, queue_size=1)
         rospy.Subscriber("/left_wrist_target_pose", PoseStamped, self.l_arm_target_pose_callback, queue_size=1)
         rospy.Subscriber("/right_hand", Float32, self.r_hand_target_value_callback, queue_size=1)
@@ -86,17 +89,14 @@ class Sciurus17FastIK:
         rospy.Subscriber("/waist_target_pose", PoseStamped, self.waist_yaw_target_pose_callback, queue_size=1)
         rospy.Subscriber("/command_pose", String, self.command_pose_callback, queue_size=1)
 
-        # 조인트 상태 구독
+        # Joint state subscription
         self.current_joint_state = None
-        self.joint_state_dict = {}  # 이름-위치 쌍을 저장하는 딕셔너리
+        self.joint_state_dict = {}
         rospy.Subscriber("/joint_states", JointState, self.joint_state_callback, queue_size=1)
 
-        # 조인트 이름 설정 (MoveIt 그룹이 없으므로 임시로 주석 처리된 상태 유지)
+        # Joint names
         self.r_arm_joint_names = self.r_arm_group.get_active_joints()
         self.l_arm_joint_names = self.l_arm_group.get_active_joints()
-        # self.r_hand_joint_names = self.r_hand_group.get_active_joints()
-        # self.l_hand_joint_names = self.l_hand_group.get_active_joints()
-
         self.neck_joint_names = ["neck_pitch_joint", "neck_yaw_joint"]
         self.waist_yaw_joint_names = ["waist_yaw_joint"]
 
@@ -111,25 +111,26 @@ class Sciurus17FastIK:
         self.current_joint_state = joint_state_msg
         self.joint_state_dict = dict(zip(joint_state_msg.name, joint_state_msg.position))
 
-    # 팔 타겟 포즈 콜백
+    # Arm target pose callbacks
     def r_arm_target_pose_callback(self, pose_msg):
-        threading.Thread(target=self.process_arm_target_pose, args=("r_arm", self.r_arm_group, pose_msg.pose, self.r_arm_pub, self.r_arm_joint_names)).start()
+        threading.Thread(target=self.process_arm_target_pose,
+                        args=("r_arm", self.r_arm_group, pose_msg.pose, self.r_arm_pub, self.r_arm_joint_names)).start()
 
     def l_arm_target_pose_callback(self, pose_msg):
-        threading.Thread(target=self.process_arm_target_pose, args=("l_arm", self.l_arm_group, pose_msg.pose, self.l_arm_pub, self.l_arm_joint_names)).start()
+        threading.Thread(target=self.process_arm_target_pose,
+                        args=("l_arm", self.l_arm_group, pose_msg.pose, self.l_arm_pub, self.l_arm_joint_names)).start()
 
-    # 그리퍼 타겟 값 콜백 (스레드로 비동기 처리)
+    # Gripper callbacks
     def r_hand_target_value_callback(self, value_msg):
         threading.Thread(target=self.process_hand_target_value, args=("r_hand", value_msg.data, CONTROL_R)).start()
 
     def l_hand_target_value_callback(self, value_msg):
         threading.Thread(target=self.process_hand_target_value, args=("l_hand", value_msg.data, CONTROL_L)).start()
 
-    # 네크 타겟 포즈 콜백
+    # Neck and waist callbacks
     def neck_target_pose_callback(self, pose_msg):
         threading.Thread(target=self.process_neck_target_pose, args=(pose_msg.pose,)).start()
 
-    # 웨이스트 요 타겟 포즈 콜백
     def waist_yaw_target_pose_callback(self, pose_msg):
         threading.Thread(target=self.process_waist_yaw_target_pose, args=(pose_msg.pose,)).start()
 
@@ -137,17 +138,38 @@ class Sciurus17FastIK:
         if command_msg.data == "init_pose":
             self.process_init_pose()
 
-    # 팔 IK 처리
+    def keep_last_point_only(self, joint_trajectory):
+        new_trajectory = JointTrajectory()
+        new_trajectory.header = joint_trajectory.header
+
+        new_trajectory.joint_names = joint_trajectory.joint_names
+        if joint_trajectory.points:
+            last_point = joint_trajectory.points[-1]
+            last_point.time_from_start = rospy.Duration(0.01)
+            new_trajectory.points.append(last_point)
+
+        return new_trajectory
+
+    # Arm IK processing
     def process_arm_target_pose(self, part, group, target_pose, publisher, joint_names):
         start_time = rospy.Time.now()
-        joint_positions = self.solve_ik_fast(part, group, target_pose, joint_names)
-        if joint_positions:
-            traj = self.create_simple_trajectory(joint_positions, joint_names)
-            self.send_trajectory(traj, publisher)
+        with self.lock:
+            traj = self.solve_ik_fast(part, group, target_pose, joint_names).joint_trajectory
+            traj_last = self.keep_last_point_only(traj)
+        if traj_last:
+            self.send_trajectory(traj_last, publisher)
         process_time = (rospy.Time.now() - start_time).to_sec()
         rospy.loginfo(f"{part} IK 처리 시간: {process_time:.4f}초")
+    # def process_arm_target_pose(self, part, group, target_pose, publisher, joint_names):
+    #     start_time = rospy.Time.now()
+    #     joint_positions = self.solve_ik_fast(part, group, target_pose, joint_names)
+    #     if joint_positions:
+    #         traj = self.create_simple_trajectory(joint_positions, joint_names)
+    #         self.send_trajectory(traj, publisher)
+    #     process_time = (rospy.Time.now() - start_time).to_sec()
+    #     rospy.loginfo(f"{part} IK 처리 시간: {process_time:.4f}초")
 
-    # 그리퍼 처리 (actionlib 기반, 스레드 내에서 실행)
+    # Gripper processing
     def process_hand_target_value(self, part, target_value, control_type):
         start_time = rospy.Time.now()
         _inv_target_value = 1 - target_value
@@ -155,14 +177,13 @@ class Sciurus17FastIK:
 
         if part == "r_hand":
             self.command(_inv_target_value, effort=0.01, type=control_type)
-        elif part == "l_hand": # left hand is negative range
+        elif part == "l_hand":
             self.command(-1 * _inv_target_value, effort=0.01, type=control_type)
 
-        # 비동기 실행이므로 wait는 호출하지 않음 (필요 시 별도 호출 가능)
         process_time = (rospy.Time.now() - start_time).to_sec()
         rospy.loginfo(f"{part} 처리 시간: {process_time:.4f}초")
 
-    # 네크 처리
+    # Neck processing
     def process_neck_target_pose(self, target_pose):
         start_time = rospy.Time.now()
         quat = target_pose.orientation
@@ -175,7 +196,7 @@ class Sciurus17FastIK:
         process_time = (rospy.Time.now() - start_time).to_sec()
         rospy.loginfo(f"neck 처리 시간: {process_time:.4f}초")
 
-    # 웨이스트 요 처리
+    # Waist yaw processing
     def process_waist_yaw_target_pose(self, target_pose):
         start_time = rospy.Time.now()
         quat = target_pose.orientation
@@ -188,39 +209,37 @@ class Sciurus17FastIK:
         rospy.loginfo(f"waist_yaw 처리 시간: {process_time:.4f}초")
 
     def process_init_pose(self):
-        # go right arm to init pose
+        # Right arm to init pose
         self.r_arm_group.set_named_target("r_arm_init_pose")
         self.r_arm_group.go(wait=True)
         self.r_arm_group.stop()
 
-        # go right gripper to init pose
+        # Right gripper to init pose
         self.command(MAX_GRIPPER_ANGLE, effort=0.01, type=CONTROL_R)
         self.wait(CONTROL_R, timeout=0.5)
 
-        # go left arm to init pose
+        # Left arm to init pose
         self.l_arm_group.set_named_target("l_arm_init_pose")
         self.l_arm_group.go(wait=True)
         self.l_arm_group.stop()
 
-        # go left gripper to init pose
+        # Left gripper to init pose
         self.command(-1 * MAX_GRIPPER_ANGLE, effort=0.01, type=CONTROL_L)
         self.wait(CONTROL_L, timeout=0.5)
 
-        # waist
+        # Waist
         _joint_positions = [0.0]
         _traj = self.create_simple_trajectory(_joint_positions, self.waist_yaw_joint_names)
         self.send_trajectory(_traj, self.waist_yaw_pub)
 
-        # head
+        # Head
         _joint_positions = [0.0, 0.0]
         _traj = self.create_simple_trajectory(_joint_positions, self.neck_joint_names)
         self.send_trajectory(_traj, self.neck_pub)
 
-        # rospy.loginfo("wait 5 seconds ...")
-        # time.sleep(5)
         rospy.loginfo("Moved to init_pose")
 
-    # actionlib를 통한 그리퍼 제어
+    # Gripper control via actionlib
     def command(self, position, effort, type):
         if type == CONTROL_R:
             self._goalR.command.position = position
@@ -253,40 +272,29 @@ class Sciurus17FastIK:
         self._goalR = GripperCommandGoal()
         self._goalL = GripperCommandGoal()
 
-    # IK 풀이 (팔에만 적용)
     def solve_ik_fast(self, part, group, target_pose, joint_names):
-        ik_request = GetPositionIKRequest()
-        ik_request.ik_request.group_name = f"{part}_group"
-        ik_request.ik_request.pose_stamped.header.frame_id = self.robot.get_planning_frame()
-        ik_request.ik_request.pose_stamped.pose = target_pose
-        ik_request.ik_request.timeout = rospy.Duration(0.001)
+        # Get current pose of end-effector (tool)
+        self.robot_state = self.robot.get_current_state()
+        group.set_start_state(self.robot_state)
 
-        if self.current_joint_state:
-            robot_state = self.current_joint_state
-            if self.last_solutions.get(part):
-                robot_state.position = list(robot_state.position)
-                for i, name in enumerate(robot_state.name):
-                    if name in joint_names and name in [n for n, p in zip(robot_state.name, self.last_solutions[part])]:
-                        robot_state.position[i] = self.last_solutions[part][joint_names.index(name)]
-            ik_request.ik_request.robot_state.joint_state = robot_state
+        waypoints = [group.get_current_pose().pose]  # 현재 포즈로부터 시작
 
-        try:
-            response = self.ik_service(ik_request)
-            if response.error_code.val == 1:
-                solution = [response.solution.joint_state.position[
-                    response.solution.joint_state.name.index(name)] for name in joint_names]
-                self.last_solutions[part] = solution
-                return solution
-            return None
-        except:
-            return None
+        waypoints.append(target_pose)
+
+        plan, fraction = group.compute_cartesian_path(
+            waypoints,  # waypoints to follow
+            0.01,       # eef_step: Cartesian translation step size
+            False
+        )
+        # Return the planned path and fraction of success
+        return plan
 
     def create_simple_trajectory(self, target_joint_positions, joint_names):
         traj = JointTrajectory()
         traj.joint_names = joint_names
         point = JointTrajectoryPoint()
         point.positions = target_joint_positions
-        point.time_from_start = rospy.Duration(0.5)
+        point.time_from_start = rospy.Duration(0.01)
         traj.points = [point]
         return traj
 
@@ -300,3 +308,4 @@ if __name__ == "__main__":
     ik_solver = Sciurus17FastIK()
     rospy.loginfo("Sciurus17 Fast IK Solver 실행 중...")
     rospy.spin()
+    moveit_commander.roscpp_shutdown()

@@ -15,14 +15,15 @@
 (defclass force-estimator
   :super propertied-object
   :slots (rarm-end-coords larm-end-coords rarm-link-list larm-link-list rarm-link-index-list larm-link-index-list
-          joint-list-all rarm-topic-name larm-topic-name robot robot-interface debug)
+          joint-list-all rarm-topic-name larm-topic-name robot robot-interface gravity debug)
   :documentation "Class for estimating external force on both arms")
 
 (defmethod force-estimator
-  (:init (&key (robot *sciurus17*) (interface *ri*) (debug nil))
+  (:init (&key (robot *sciurus17*) (interface *ri*) (gravity nil) (debug nil))
     "Initialize the force estimator for both arms"
     (send self :set-val 'robot robot)
     (send self :set-val 'robot-interface interface)
+    (send self :set-val 'gravity gravity)
     (send self :set-val 'debug debug)
     ;; Right arm 설정
     (send self :set-val 'rarm-end-coords (send robot :link "r_link7"))
@@ -48,8 +49,6 @@
   (:calc-gravity-torque ()
     "Calculate gravity-induced torque for entire robot"
     (if debug (format t "Calculating Gravity Torque:~%"))
-    (send robot-interface :update-robot-state)
-    (send robot :angle-vector (send robot-interface :potentio-vector))
     (let* ((torque-vector (send robot :calc-torque
                                 :calc-statics-p t
                                 :debug-view nil
@@ -99,9 +98,14 @@
   (:estimate-external-force ()
     "Estimate and publish external force for both arms"
     (let (real-tau gravity-tau ext-tau rarm-ext-force larm-ext-force)
+      (send robot-interface :update-robot-state)
+      (send robot :angle-vector (send robot-interface :potentio-vector))
       (setq real-tau (send self :get-real-torque))
-      (setq gravity-tau (send self :calc-gravity-torque))
-      (setq ext-tau (v- real-tau gravity-tau))
+      (if gravity
+          (progn
+            (setq gravity-tau (send self :calc-gravity-torque))
+            (setq ext-tau (v- real-tau gravity-tau)))
+          (setq ext-tau real-tau))
       ;; Right arm
       (setq rarm-ext-force (send self :calc-external-force ext-tau :rarm rarm-link-index-list))
       (if rarm-ext-force
@@ -119,7 +123,7 @@
 )
 
 ;; Force Estimator instance
-(setq *estimator* (instance force-estimator :init :robot *sciurus17* :interface *ri* :debug t))
+(setq *estimator* (instance force-estimator :init :robot *sciurus17* :interface *ri* :gravity nil :debug nil))
 
 (ros::rate 100)
 (while (ros::ok)

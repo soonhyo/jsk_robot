@@ -28,6 +28,7 @@ class Sciurus17FastIK:
         # 팔 그룹 초기화 (IK 사용)
         self.r_arm_group = MoveGroupCommander("r_arm_group")
         self.l_arm_group = MoveGroupCommander("l_arm_group")
+        self.two_arm_group = MoveGroupCommander("two_arm_group")
 
         # 그리퍼 액션 클라이언트 초기화
         self._clientR = actionlib.SimpleActionClient("/sciurus17/controller1/right_hand_controller/gripper_cmd", GripperCommandAction)
@@ -96,6 +97,9 @@ class Sciurus17FastIK:
         # 조인트 이름 설정 (MoveIt 그룹이 없으므로 임시로 주석 처리된 상태 유지)
         self.r_arm_joint_names = self.r_arm_group.get_active_joints()
         self.l_arm_joint_names = self.l_arm_group.get_active_joints()
+        self.two_arm_joint_names = self.two_arm_group.get_active_joints()
+
+        self.two_arm_link_names = self.robot.get_link_names("two_arm_group")
 
         # self.r_hand_joint_names = self.r_hand_group.get_active_joints()
         # self.l_hand_joint_names = self.l_hand_group.get_active_joints()
@@ -142,44 +146,41 @@ class Sciurus17FastIK:
 
     def r_arm_target_pose_callback(self, pose_msg):
         # 오른팔만 처리할 경우
-        threading.Thread(target=self.process_both_arms_target_pose, args=(pose_msg.pose, None)).start()
+        # threading.Thread(target=self.process_both_arms_target_pose, args=(pose_msg.pose, None)).start()
+        self.r_arm_target_pose = pose_msg
+        threading.Thread(target=self.process_both_arms_target_pose, args=(self.r_arm_target_pose, self.l_arm_target_pose)).start()
 
     def l_arm_target_pose_callback(self, pose_msg):
         # 왼팔만 처리할 경우
-        threading.Thread(target=self.process_both_arms_target_pose, args=(None, pose_msg.pose)).start()
+        # threading.Thread(target=self.process_both_arms_target_pose, args=(None, pose_msg.pose)).start()
+        self.l_arm_target_pose = pose_msg
+        threading.Thread(target=self.process_both_arms_target_pose, args=(self.r_arm_target_pos, self.l_arm_target_pose)).start()
 
     def process_both_arms_target_pose(self, r_target_pose=None, l_target_pose=None):
-        start_time = rospy.Time.now()
+        with self.lock:  # 동기화 보장
+            start_time = rospy.Time.now()
 
-        # 현재 로봇 상태 가져오기
-        current_robot_state = self.robot.get_current_state()
+            # 현재 로봇 상태 가져오기
+            current_robot_state = self.robot.get_current_state()
 
-        # 오른팔 IK 계산
-        r_joint_positions = None
-        if r_target_pose:
-            r_joint_positions = self.solve_ik_fast(
-                "r_arm", self.r_arm_group, r_target_pose,
-                self.r_arm_joint_names
+            # 오른팔 IK 계산
+            both_arm_joint_positions = None
+            both_arm_joint_positions = self.solve_ik_fast(
+                "two_arm", self.two_arm_group, [r_target_pose, l_target_pose],
+                self.two_arm_joint_names
             )
 
-        # 왼팔 IK 계산
-        l_joint_positions = None
-        if l_target_pose:
-            l_joint_positions = self.solve_ik_fast(
-                "l_arm", self.l_arm_group, l_target_pose,
-                self.l_arm_joint_names
-            )
+            # 트라젝트리 생성 및 전송
+            if both_arm_joint_positions:
+                print("both_arm_joint_positions:", both_arm_joint_positions)
+            #     r_traj = self.create_simple_trajectory(r_joint_positions, self.r_arm_joint_names)
+            #     self.send_trajectory(r_traj, self.r_arm_pub)
+            # if l_joint_positions:
+            #     l_traj = self.create_simple_trajectory(l_joint_positions, self.l_arm_joint_names)
+            #     self.send_trajectory(l_traj, self.l_arm_pub)
 
-        # 트라젝트리 생성 및 전송
-        if r_joint_positions:
-            r_traj = self.create_simple_trajectory(r_joint_positions, self.r_arm_joint_names)
-            self.send_trajectory(r_traj, self.r_arm_pub)
-        if l_joint_positions:
-            l_traj = self.create_simple_trajectory(l_joint_positions, self.l_arm_joint_names)
-            self.send_trajectory(l_traj, self.l_arm_pub)
-
-        process_time = (rospy.Time.now() - start_time).to_sec()
-        rospy.loginfo(f"Both arms IK 처리 시간: {process_time:.4f}초")
+            process_time = (rospy.Time.now() - start_time).to_sec()
+            rospy.loginfo(f"Both arms IK 처리 시간: {process_time:.4f}초")
 
     # 팔 IK 처리
     def process_arm_target_pose(self, part, group, target_pose, publisher, joint_names):
@@ -302,120 +303,124 @@ class Sciurus17FastIK:
         # IK 요청 객체 먼저 생성
         ik_request = GetPositionIKRequest()
         ik_request.ik_request.group_name = f"{part}_group"
-        ik_request.ik_request.pose_stamped.header.frame_id = self.robot.get_planning_frame()
-        ik_request.ik_request.pose_stamped.pose = target_pose
+        for i in range(len(target_pose)):
+            pose_stamped = PoseStamped()
+            pose_stamped.pose = target_pose[i]
+            pose_stamped.header.frame_id = self.robot.get_planning_frame()
+            ik_request.ik_request.pose_stamped_vector.append(pose_stamped)
         ik_request.ik_request.timeout = rospy.Duration(0.01) # 타임아웃 짧게 유지 (Fast IK 목적)
-        ik_request.ik_request.avoid_collisions = False
         # 초기 로봇 상태 설정 (아래에서 업데이트될 수 있음)
-        # ik_request.ik_request.robot_state = self.robot.get_current_state()
+        ik_request.ik_request.robot_state = self.robot.get_current_state()
+        ik_request.ik_request.ik_link_names = self.two_arm_link_names
 
         # --- 제약 조건 설정 시작 (가변 허용 오차 적용) ---
         constraints = Constraints()
         constraints.name = f"{part}_ik_joint_limit_variable"
 
         # 최소/최대 허용 오차 설정 (라디안)
-        min_tolerance_rad = 0.5 # 베이스에 가까운 조인트의 허용 오차 (예: 약 2.8도)
+        min_tolerance_rad = 0.3 # 베이스에 가까운 조인트의 허용 오차 (예: 약 2.8도)
         max_tolerance_rad = 0.5   # 끝(end-effector)에 가까운 조인트의 허용 오차 (예: 약 28.6도)
 
-        if not self.joint_state_dict:
-            rospy.logwarn(f"[{part}] Cannot create constraints for IK: joint_state_dict is empty.")
-        else:
-            valid_joints = True
-            current_joint_values_for_constraints = {}
-            for joint_name in joint_names:
-                if joint_name in self.joint_state_dict:
-                    current_joint_values_for_constraints[joint_name] = self.joint_state_dict[joint_name]
-                else:
-                    rospy.logwarn(f"[{part}] Cannot find current value for joint '{joint_name}' in joint_state_dict for IK constraint.")
-                    valid_joints = False
-                    break
+        # if not self.joint_state_dict:
+        #     rospy.logwarn(f"[{part}] Cannot create constraints for IK: joint_state_dict is empty.")
+        # else:
+        #     valid_joints = True
+        #     current_joint_values_for_constraints = {}
+        #     for joint_name in joint_names:
+        #         if joint_name in self.joint_state_dict:
+        #             current_joint_values_for_constraints[joint_name] = self.joint_state_dict[joint_name]
+        #         else:
+        #             rospy.logwarn(f"[{part}] Cannot find current value for joint '{joint_name}' in joint_state_dict for IK constraint.")
+        #             valid_joints = False
+        #             break
 
-            if valid_joints:
-                num_joints = len(joint_names)
-                # 각 조인트에 대해 순서(index)에 따라 다른 허용 오차 적용
-                for i, joint_name in enumerate(joint_names):
-                    # 현재 조인트의 허용 오차 계산 (선형 보간)
-                    if num_joints > 1:
-                        # i=0 (베이스 쪽)일 때 min, i=num_joints-1 (끝 쪽)일 때 max가 되도록 보간
-                        fraction = float(i) / (num_joints - 1)
-                        current_tolerance = min_tolerance_rad + (max_tolerance_rad - min_tolerance_rad) * fraction
-                    else:
-                        # 조인트가 하나뿐인 경우 (이론상 가능) 평균 또는 기본값 사용
-                        current_tolerance = (min_tolerance_rad + max_tolerance_rad) / 2.0
+        #     if valid_joints:
+        #         num_joints = len(joint_names)
+        #         # 각 조인트에 대해 순서(index)에 따라 다른 허용 오차 적용
+        #         for i, joint_name in enumerate(joint_names):
+        #             # 현재 조인트의 허용 오차 계산 (선형 보간)
+        #             if num_joints > 1:
+        #                 # i=0 (베이스 쪽)일 때 min, i=num_joints-1 (끝 쪽)일 때 max가 되도록 보간
+        #                 fraction = float(i) / (num_joints - 1)
+        #                 current_tolerance = min_tolerance_rad + (max_tolerance_rad - min_tolerance_rad) * fraction
+        #             else:
+        #                 # 조인트가 하나뿐인 경우 (이론상 가능) 평균 또는 기본값 사용
+        #                 current_tolerance = (min_tolerance_rad + max_tolerance_rad) / 2.0
 
-                    jc = JointConstraint()
-                    jc.joint_name = joint_name
-                    jc.position = current_joint_values_for_constraints[joint_name] # 현재 각도 기준
-                    jc.tolerance_above = current_tolerance # 계산된 허용 오차 적용
-                    jc.tolerance_below = current_tolerance # 계산된 허용 오차 적용 (값 자체는 양수)
-                    jc.weight = 1.0 # IK 솔버가 가중치를 해석할 경우 의미 있음
-                    constraints.joint_constraints.append(jc)
+        #             jc = JointConstraint()
+        #             jc.joint_name = joint_name
+        #             jc.position = current_joint_values_for_constraints[joint_name] # 현재 각도 기준
+        #             jc.tolerance_above = current_tolerance # 계산된 허용 오차 적용
+        #             jc.tolerance_below = current_tolerance # 계산된 허용 오차 적용 (값 자체는 양수)
+        #             jc.weight = 1.0 # IK 솔버가 가중치를 해석할 경우 의미 있음
+        #             constraints.joint_constraints.append(jc)
 
-                # 생성된 제약 조건을 IK 요청에 추가
-                ik_request.ik_request.constraints = constraints
-                rospy.loginfo(f"[{part}] Added variable constraints (min:{min_tolerance_rad:.3f}, max:{max_tolerance_rad:.3f}) to IK request.")
-            else:
-                rospy.logwarn(f"[{part}] Could not add constraints to IK request due to missing joint values.")
-        # --- 제약 조건 설정 끝 ---
+        #         # 생성된 제약 조건을 IK 요청에 추가
+        #         ik_request.ik_request.constraints = constraints
+        #         rospy.loginfo(f"[{part}] Added variable constraints (min:{min_tolerance_rad:.3f}, max:{max_tolerance_rad:.3f}) to IK request.")
+        #     else:
+        #         rospy.logwarn(f"[{part}] Could not add constraints to IK request due to missing joint values.")
+        # # --- 제약 조건 설정 끝 ---
 
-        # --- IK 시드 상태 설정 (기존 로직 유지) ---
-        # 제약조건과 함께 시드 상태는 IK 해 탐색에 영향을 줌
-        if self.current_joint_state:
-            # 주의: robot_state를 직접 수정하는 것은 잠재적 위험이 있음
-            # current_state 복사 후 수정하는 것이 더 안전할 수 있음
-            robot_state_for_ik = self.robot.get_current_state().joint_state # 복사본 사용 고려
+        # # --- IK 시드 상태 설정 (기존 로직 유지) ---
+        # # 제약조건과 함께 시드 상태는 IK 해 탐색에 영향을 줌
+        # if self.current_joint_state:
+        #     # 주의: robot_state를 직접 수정하는 것은 잠재적 위험이 있음
+        #     # current_state 복사 후 수정하는 것이 더 안전할 수 있음
+        #     robot_state_for_ik = self.robot.get_current_state().joint_state # 복사본 사용 고려
 
-            # last_solutions 를 시드 상태로 사용하려는 로직 (원래 코드 유지)
-            # 이 로직은 제약 조건과 상호작용할 수 있음
-            last_sol = self.last_solutions.get(part)
-            if last_sol:
-                 # last_sol이 joint_names 순서와 일치한다고 가정
-                 if len(last_sol) == len(joint_names):
-                     temp_joint_state = JointState()
-                     temp_joint_state.header = robot_state_for_ik.header # 헤더 복사
-                     temp_joint_state.name = list(robot_state_for_ik.name) # 이름 복사
-                     temp_joint_state.position = list(robot_state_for_ik.position) # 위치 복사
+        #     # last_solutions 를 시드 상태로 사용하려는 로직 (원래 코드 유지)
+        #     # 이 로직은 제약 조건과 상호작용할 수 있음
+        #     last_sol = self.last_solutions.get(part)
+        #     if last_sol:
+        #          # last_sol이 joint_names 순서와 일치한다고 가정
+        #          if len(last_sol) == len(joint_names):
+        #              temp_joint_state = JointState()
+        #              temp_joint_state.header = robot_state_for_ik.header # 헤더 복사
+        #              temp_joint_state.name = list(robot_state_for_ik.name) # 이름 복사
+        #              temp_joint_state.position = list(robot_state_for_ik.position) # 위치 복사
 
-                     name_to_last_sol_map = dict(zip(joint_names, last_sol))
+        #              name_to_last_sol_map = dict(zip(joint_names, last_sol))
 
-                     updated_count = 0
-                     for idx, name in enumerate(temp_joint_state.name):
-                          if name in name_to_last_sol_map:
-                              temp_joint_state.position[idx] = name_to_last_sol_map[name]
-                              updated_count += 1
+        #              updated_count = 0
+        #              for idx, name in enumerate(temp_joint_state.name):
+        #                   if name in name_to_last_sol_map:
+        #                       temp_joint_state.position[idx] = name_to_last_sol_map[name]
+        #                       updated_count += 1
 
-                     if updated_count > 0:
-                          ik_request.ik_request.robot_state.joint_state = temp_joint_state
-                          # rospy.loginfo(f"[{part}] Using last solution as seed state for IK.")
-                 else:
-                      rospy.logwarn(f"[{part}] Mismatch length between last_sol ({len(last_sol)}) and joint_names ({len(joint_names)}). Not using last solution as seed.")
+        #              if updated_count > 0:
+        #                   ik_request.ik_request.robot_state.joint_state = temp_joint_state
+        #                   # rospy.loginfo(f"[{part}] Using last solution as seed state for IK.")
+        #          else:
+        #               rospy.logwarn(f"[{part}] Mismatch length between last_sol ({len(last_sol)}) and joint_names ({len(joint_names)}). Not using last solution as seed.")
 
 
         # --- IK 서비스 호출 ---
-        try:
-            response = self.ik_service(ik_request)
-            if response.error_code.val == response.error_code.SUCCESS: # SUCCESS (1) 확인
-                # joint_names 순서에 맞게 결과 추출
-                solution_dict = dict(zip(response.solution.joint_state.name, response.solution.joint_state.position))
-                solution = [solution_dict[name] for name in joint_names if name in solution_dict]
+        # try:
+        response = self.ik_service(ik_request)
+        if response.error_code.val == response.error_code.SUCCESS: # SUCCESS (1) 확인
+            # joint_names 순서에 맞게 결과 추출
+            print("reponse.solution.joint_state;", reponse.solution.joint_state)
+            # solution_dict = dict(zip(response.solution.joint_state.name, response.solution.joint_state.position))
+            # solution = [solution_dict[name] for name in joint_names if name in solution_dict]
 
-                # 모든 joint 이름이 결과에 있는지 확인 (중요)
-                if len(solution) == len(joint_names):
-                    self.last_solutions[part] = solution # 성공 시 last_solution 업데이트
-                    return solution
-                else:
-                    rospy.logerr(f"[{part}] IK solution found, but mismatch in expected joints. Found {len(solution)}, expected {len(joint_names)}.")
-                    return None
-            else:
-                # 에러 코드 출력 (디버깅에 유용)
-                rospy.logwarn(f"[{part}] IK Failed. Error code: {response.error_code.val}")
-                return None
-        except rospy.ServiceException as e:
-            rospy.logerr(f"[{part}] IK service call failed: {e}")
+            # # 모든 joint 이름이 결과에 있는지 확인 (중요)
+            # if len(solution) == len(joint_names):
+            #     self.last_solutions[part] = solution # 성공 시 last_solution 업데이트
+            #     return solution
+            # else:
+            #     rospy.logerr(f"[{part}] IK solution found, but mismatch in expected joints. Found {len(solution)}, expected {len(joint_names)}.")
+            #     return None
+        else:
+            # 에러 코드 출력 (디버깅에 유용)
+            rospy.logwarn(f"[{part}] IK Failed. Error code: {response.error_code.val}")
             return None
-        except Exception as e: # 일반 예외 처리
-            rospy.logerr(f"[{part}] An unexpected error occurred during IK solving: {e}")
-            return None
+        # except rospy.ServiceException as e:
+        #     rospy.logerr(f"[{part}] IK service call failed: {e}")
+        #     return None
+        # except Exception as e: # 일반 예외 처리
+        #     rospy.logerr(f"[{part}] An unexpected error occurred during IK solving: {e}")
+        #     return None
 
     def create_simple_trajectory(self, target_joint_positions, joint_names):
         traj = JointTrajectory()

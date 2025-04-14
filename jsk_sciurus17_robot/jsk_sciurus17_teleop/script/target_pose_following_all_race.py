@@ -149,37 +149,38 @@ class Sciurus17FastIK:
         threading.Thread(target=self.process_both_arms_target_pose, args=(None, pose_msg.pose)).start()
 
     def process_both_arms_target_pose(self, r_target_pose=None, l_target_pose=None):
-        start_time = rospy.Time.now()
+        with self.lock:  # 동기화 보장
+            start_time = rospy.Time.now()
 
-        # 현재 로봇 상태 가져오기
-        current_robot_state = self.robot.get_current_state()
+            # 현재 로봇 상태 가져오기
+            current_robot_state = self.robot.get_current_state()
 
-        # 오른팔 IK 계산
-        r_joint_positions = None
-        if r_target_pose:
-            r_joint_positions = self.solve_ik_fast(
-                "r_arm", self.r_arm_group, r_target_pose,
-                self.r_arm_joint_names
-            )
+            # 오른팔 IK 계산
+            r_joint_positions = None
+            if r_target_pose:
+                r_joint_positions = self.solve_ik_fast(
+                    "r_arm", self.r_arm_group, r_target_pose,
+                    self.r_arm_joint_names
+                )
 
-        # 왼팔 IK 계산
-        l_joint_positions = None
-        if l_target_pose:
-            l_joint_positions = self.solve_ik_fast(
-                "l_arm", self.l_arm_group, l_target_pose,
-                self.l_arm_joint_names
-            )
+            # 왼팔 IK 계산
+            l_joint_positions = None
+            if l_target_pose:
+                l_joint_positions = self.solve_ik_fast(
+                    "l_arm", self.l_arm_group, l_target_pose,
+                    self.l_arm_joint_names
+                )
 
-        # 트라젝트리 생성 및 전송
-        if r_joint_positions:
-            r_traj = self.create_simple_trajectory(r_joint_positions, self.r_arm_joint_names)
-            self.send_trajectory(r_traj, self.r_arm_pub)
-        if l_joint_positions:
-            l_traj = self.create_simple_trajectory(l_joint_positions, self.l_arm_joint_names)
-            self.send_trajectory(l_traj, self.l_arm_pub)
+            # 트라젝트리 생성 및 전송
+            if r_joint_positions:
+                r_traj = self.create_simple_trajectory(r_joint_positions, self.r_arm_joint_names)
+                self.send_trajectory(r_traj, self.r_arm_pub)
+            if l_joint_positions:
+                l_traj = self.create_simple_trajectory(l_joint_positions, self.l_arm_joint_names)
+                self.send_trajectory(l_traj, self.l_arm_pub)
 
-        process_time = (rospy.Time.now() - start_time).to_sec()
-        rospy.loginfo(f"Both arms IK 처리 시간: {process_time:.4f}초")
+            process_time = (rospy.Time.now() - start_time).to_sec()
+            rospy.loginfo(f"Both arms IK 처리 시간: {process_time:.4f}초")
 
     # 팔 IK 처리
     def process_arm_target_pose(self, part, group, target_pose, publisher, joint_names):
@@ -305,16 +306,15 @@ class Sciurus17FastIK:
         ik_request.ik_request.pose_stamped.header.frame_id = self.robot.get_planning_frame()
         ik_request.ik_request.pose_stamped.pose = target_pose
         ik_request.ik_request.timeout = rospy.Duration(0.01) # 타임아웃 짧게 유지 (Fast IK 목적)
-        ik_request.ik_request.avoid_collisions = False
         # 초기 로봇 상태 설정 (아래에서 업데이트될 수 있음)
-        # ik_request.ik_request.robot_state = self.robot.get_current_state()
+        ik_request.ik_request.robot_state = self.robot.get_current_state()
 
         # --- 제약 조건 설정 시작 (가변 허용 오차 적용) ---
         constraints = Constraints()
         constraints.name = f"{part}_ik_joint_limit_variable"
 
         # 최소/최대 허용 오차 설정 (라디안)
-        min_tolerance_rad = 0.5 # 베이스에 가까운 조인트의 허용 오차 (예: 약 2.8도)
+        min_tolerance_rad = 0.3 # 베이스에 가까운 조인트의 허용 오차 (예: 약 2.8도)
         max_tolerance_rad = 0.5   # 끝(end-effector)에 가까운 조인트의 허용 오차 (예: 약 28.6도)
 
         if not self.joint_state_dict:
