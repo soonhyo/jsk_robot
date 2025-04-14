@@ -15,35 +15,38 @@
 (defclass force-estimator
   :super propertied-object
   :slots (rarm-end-coords larm-end-coords rarm-link-list larm-link-list rarm-link-index-list larm-link-index-list
-          joint-list-all rarm-topic-name larm-topic-name robot robot-interface gravity debug)
+          joint-list-all rarm-topic-name larm-topic-name robot robot-interface gravity real debug)
   :documentation "Class for estimating external force on both arms")
 
 (defmethod force-estimator
-  (:init (&key (robot *sciurus17*) (interface *ri*) (gravity nil) (debug nil))
+  (:init (&key (robot *sciurus17*) (interface *ri*) (gravity nil) (real nil) (debug nil))
     "Initialize the force estimator for both arms"
     (send self :set-val 'robot robot)
     (send self :set-val 'robot-interface interface)
     (send self :set-val 'gravity gravity)
+    (send self :set-val 'real real)
     (send self :set-val 'debug debug)
-    ;; Right arm 설정
+    ;; Right arm 
     (send self :set-val 'rarm-end-coords (send robot :link "r_link7"))
     (send self :set-val 'rarm-link-list (send robot :rarm :links))
     (send self :set-val 'rarm-link-index-list
           (mapcar #'(lambda (joint-name) (position joint-name (send-all (send robot :joint-list) :name)))
                   (send-all (send robot :rarm :joint-list) :name)))
     (send self :set-val 'rarm-topic-name "/rarm_force_estimation")
-    ;; Left arm 설정
+    ;; Left arm 
     (send self :set-val 'larm-end-coords (send robot :link "l_link7"))
     (send self :set-val 'larm-link-list (send robot :larm :links))
     (send self :set-val 'larm-link-index-list
           (mapcar #'(lambda (joint-name) (position joint-name (send-all (send robot :joint-list) :name)))
                   (send-all (send robot :larm :joint-list) :name)))
     (send self :set-val 'larm-topic-name "/larm_force_estimation")
-    ;; 전체 joint list
+    ;; all joint list
     (send self :set-val 'joint-list-all (send robot :joint-list))
-    ;; ROS 퍼블리셔 초기화
+    ;; ROS publisher
     (ros::advertise rarm-topic-name geometry_msgs::WrenchStamped 10)
     (ros::advertise larm-topic-name geometry_msgs::WrenchStamped 10)
+    ;; update joint state from not using groupname
+    (send robot-interface :robot-state-update-alone)
     self)
 
   (:calc-gravity-torque ()
@@ -98,14 +101,17 @@
   (:estimate-external-force ()
     "Estimate and publish external force for both arms"
     (let (real-tau gravity-tau ext-tau rarm-ext-force larm-ext-force)
-      (send robot-interface :update-robot-state)
-      (send robot :angle-vector (send robot-interface :potentio-vector))
-      (setq real-tau (send self :get-real-torque))
+      (send robot-interface :update-robot-state) ;; ros::spin-once groupname is slow, need to make function to update robot state from joint states topic directly
+      (send robot :angle-vector (send robot-interface :state :potentio-vector))
+      (if real
+	  (setq real-tau (send self :get-real-torque))
+	(setq real-tau (instantiate float-vector (length (send robot :angle-vector)))))
       (if gravity
           (progn
             (setq gravity-tau (send self :calc-gravity-torque))
-            (setq ext-tau (v- real-tau gravity-tau)))
-          (setq ext-tau real-tau))
+	    (if real
+		(setq ext-tau (v- real-tau gravity-tau))
+	      (setq ext-tau gravity-tau))))
       ;; Right arm
       (setq rarm-ext-force (send self :calc-external-force ext-tau :rarm rarm-link-index-list))
       (if rarm-ext-force
@@ -123,10 +129,26 @@
 )
 
 ;; Force Estimator instance
-(setq *estimator* (instance force-estimator :init :robot *sciurus17* :interface *ri* :gravity nil :debug nil))
+(setq *estimator* (instance force-estimator :init :robot *sciurus17* :interface *ri* :gravity t :real t :debug nil))
 
-(ros::rate 100)
-(while (ros::ok)
-  (ros::spin-once)
-  (send *estimator* :estimate-external-force)
-  (ros::sleep))
+(defun loop-hz-debug ()
+  (ros::rate 200)  ;; 200 Hz loop
+  (while (ros::ok)
+    (let ((start-time (ros::time-now)))
+      (ros::spin-once)
+      (send *estimator* :estimate-external-force)
+      (ros::sleep)
+      (let ((elapsed-time (send (ros::time- (ros::time-now) start-time) :to-sec)))
+        (if (> elapsed-time 0)
+            (ros::ros-info "Update-robot-state frequency: ~A Hz" (/ 1.0 elapsed-time))
+            (ros::ros-info "Update-robot-state frequency: N/A (elapsed time too small)"))))))
+
+(defun main ()
+  (ros::rate 200)
+  (while (ros::ok)
+    (ros::spin-once)
+    (send *estimator* :estimate-external-force)
+    (ros::sleep)))
+
+;; main
+(loop-hz-debug)
