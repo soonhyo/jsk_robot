@@ -1,0 +1,4 @@
+# StopRosbag.srv
+---
+bool success
+string message
