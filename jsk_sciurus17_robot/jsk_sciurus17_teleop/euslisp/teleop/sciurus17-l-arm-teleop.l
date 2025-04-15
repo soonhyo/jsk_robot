@@ -71,7 +71,7 @@
 
 ;; Subscribe to left arm topics
 (ros::subscribe "/left_wrist_target_pose" geometry_msgs::PoseStamped #'l-arm-target-pose-callback)
-;(ros::subscribe "/left_hand" std_msgs::Float32 #'l-hand-target-value-callback)
+(ros::subscribe "/left_hand" std_msgs::Float32 #'l-hand-target-value-callback)
 
 ;; Main loop
 (defun ik-viewer-loop ()
@@ -81,7 +81,7 @@
     (ros::sleep)))
 
 (defun ik-viewer-loop-hz-debug ()
-  (ros::rate 30)  ;; 200 Hz loop
+  (ros::rate 100)  ;; 200 Hz loop
   (while (ros::ok)
     (let ((start-time (ros::time-now)))
       (ros::spin-once)

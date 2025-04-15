@@ -125,6 +125,39 @@
        (push (send (cdr client) :get-result) results))
      results))
 
+  (:robot-state-update-alone ()
+    (ros::subscribe "/joint_states" sensor_msgs::JointState #'send self :ros-state-callback 1))
+
+  (:update-robot-state
+   (&key (wait-until-update nil))
+   (let (joint-names positions velocities efforts)
+     (ros::spin-once)
+     (when wait-until-update
+       (send self :wait-until-update-all-joints wait-until-update))
+     ;; (unless joint-action-enable
+     ;;   (return-from :update-robot-state (send robot :angle-vector)))
+     (unless robot-state (return-from :update-robot-state))
+     (setq joint-names (cdr (assoc :name robot-state))
+	   positions (cdr (assoc :position robot-state))
+	   velocities (cdr (assoc :velocity robot-state))
+	   efforts (cdr (assoc :effort robot-state)))
+     (let ((joint-num (length joint-names)))
+       (when (not (eq joint-num (length velocities)))
+	 (setq velocities (instantiate float-vector joint-num)))
+       (when (not (eq joint-num (length efforts)))
+	 (setq efforts (instantiate float-vector joint-num))))
+     (mapcar #'(lambda (n p v e)
+		 (let (j (kn (intern (string-upcase n) *keyword-package*)))
+		   (when (and (find-method robot kn) (setq j (send robot kn)))
+                     (send j :ros-joint-angle p)
+                     ;; velocity
+		     (send j :joint-velocity v)
+		     ;; effort
+		     (send j :joint-torque e))))
+	     (coerce joint-names cons)
+	     (coerce positions cons)
+	     (coerce velocities cons)
+	     (coerce efforts cons))))
 ;; (:angle-vector
 ;;    (av &optional tm (ctype controller-type) (start-time 0) &rest args
 ;;        &key (move-arm :arms) start-offset-time (clear-velocities t) (spin-once t) &allow-other-keys)
