@@ -125,88 +125,9 @@
        (push (send (cdr client) :get-result) results))
      results))
 
-  (:robot-state-update-alone ()
+  (:update-robot-state-alone ()
     (ros::subscribe "/joint_states" sensor_msgs::JointState #'send self :ros-state-callback 1))
 
-  (:update-robot-state
-   (&key (wait-until-update nil))
-   (let (joint-names positions velocities efforts)
-     (ros::spin-once)
-     (when wait-until-update
-       (send self :wait-until-update-all-joints wait-until-update))
-     ;; (unless joint-action-enable
-     ;;   (return-from :update-robot-state (send robot :angle-vector)))
-     (unless robot-state (return-from :update-robot-state))
-     (setq joint-names (cdr (assoc :name robot-state))
-	   positions (cdr (assoc :position robot-state))
-	   velocities (cdr (assoc :velocity robot-state))
-	   efforts (cdr (assoc :effort robot-state)))
-     (let ((joint-num (length joint-names)))
-       (when (not (eq joint-num (length velocities)))
-	 (setq velocities (instantiate float-vector joint-num)))
-       (when (not (eq joint-num (length efforts)))
-	 (setq efforts (instantiate float-vector joint-num))))
-     (mapcar #'(lambda (n p v e)
-		 (let (j (kn (intern (string-upcase n) *keyword-package*)))
-		   (when (and (find-method robot kn) (setq j (send robot kn)))
-                     (send j :ros-joint-angle p)
-                     ;; velocity
-		     (send j :joint-velocity v)
-		     ;; effort
-		     (send j :joint-torque e))))
-	     (coerce joint-names cons)
-	     (coerce positions cons)
-	     (coerce velocities cons)
-	     (coerce efforts cons))))
-;; (:angle-vector
-;;    (av &optional tm (ctype controller-type) (start-time 0) &rest args
-;;        &key (move-arm :arms) start-offset-time (clear-velocities t) (spin-once t) &allow-other-keys)
-;;    "Send joind angle to robot with self-collision motion planning, this method returns immediately, so use :wait-interpolation to block until the motion stops.
-;; - av : joint angle vector [rad]
-;; - tm : time to goal in [msec]
-;; "
-;;    (setq ctype (or ctype controller-type))  ;; use default if ctype is nil
-;;    ;; for simulation mode
-;;    (when (send self :simulation-modep)
-;;      (return-from :angle-vector (send* self :angle-vector-raw av tm ctype start-time :spin-once spin-once args)))
-;;    (if (and (get self :moveit-environment)
-;;             (send (get self :moveit-environment) :robot))
-;;      (progn
-;;        (unless tm (setq tm 3000))
-;;        (send-super* :angle-vector-motion-plan av :ctype ctype :move-arm move-arm :total-time tm
-;;                     :start-offset-time (if start-offset-time start-offset-time start-time)
-;;                     :clear-velocities clear-velocities :use-torso nil args))
-;;      (progn
-;;        (warning-message 3 "moveit environment is not correctly set, execute :angle-vector-raw instead~%")
-;;        (unless tm (setq tm :fast))
-;;        (return-from :angle-vector (send* self :angle-vector av tm ctype start-time :spin-once spin-once args)))))
-;;   (:angle-vector-sequence
-;;    (avs &optional tms (ctype controller-type) (start-time 0) &rest args
-;;         &key (move-arm :arms) start-offset-time (clear-velocities t) &allow-other-keys)
-;;    "Send joind angle sequence to robot with self-collision motion planning, this method returns immediately, so use :wait-interpolation to block until the motion stops.
-;; - avs : sequence of joint angle vector [rad]
-;; - tms : list of time to goal from previous angle-vector point in [msec]
-;; "
-;;    (setq ctype (or ctype controller-type))  ;; use default if ctype is nil
-;;    ;; for simulation mode
-;;    (when (send self :simulation-modep)
-;;      (return-from :angle-vector-sequence
-;;                   (send* self :angle-vector-sequence-raw avs tms ctype start-time args)))
-;;    (if (and (get self :moveit-environment)
-;;             (send (get self :moveit-environment) :robot))
-;;      (progn
-;;        (setq tms
-;;              (if tms
-;;                (if (and (listp tms) (every #'numberp tms)) (apply #'+ tms) tms)
-;;                3000))
-;;        (send-super* :angle-vector-motion-plan avs :ctype ctype :move-arm move-arm :total-time tms
-;;                     :start-offset-time (if start-offset-time start-offset-time start-time)
-;;                     :clear-velocities clear-velocities :use-torso nil args))
-;;      (progn
-;;        (warning-message 3 "moveit environment is not correctly set, execute :angle-vector-sequence-raw instead~%")
-;;        (unless tms (setq tms :fast))
-;;        (return-from :angle-vector-sequence
-;;                     (send* self :angle-vector-sequence-raw avs tms ctype start-time args)))))
   (:ros-state-callback
    (msg)
    (send-super :ros-state-callback msg))
@@ -251,7 +172,7 @@
                                          (send robot :larm :joint-list))))
          )))
 
-(defun sciurus17-init (&key (safe t) (type :default-controller) (moveit t))
+(defun sciurus17-init (&key (safe nil) (type :default-controller) (moveit nil))
   (let (mvit-env mvit-rb)
     (when moveit
       (setq mvit-env (instance sciurus17-moveit-environment))

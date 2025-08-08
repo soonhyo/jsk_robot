@@ -1,3 +1,4 @@
+#!/usr/bin/env roseus
 (require :sciurus17 "package://sciurus17eus/sciurus17-interface.l")
 (ros::load-ros-package "geometry_msgs")
 
@@ -46,7 +47,7 @@
     (ros::advertise rarm-topic-name geometry_msgs::WrenchStamped 10)
     (ros::advertise larm-topic-name geometry_msgs::WrenchStamped 10)
     ;; update joint state from not using groupname
-    (send robot-interface :robot-state-update-alone)
+    (send robot-interface :update-robot-state-alone)
     self)
 
   (:calc-gravity-torque ()
@@ -78,7 +79,7 @@
       (if (eq FM-vec nil)
           (return-from :calc-external-force nil)
           (progn
-            (setq FM-vec (scale -0.01 FM-vec))
+            (setq FM-vec (scale -1 FM-vec))
             (if debug
                 (format t "FM-vec for ~A: ~A~%" limb FM-vec))
             FM-vec))))
@@ -111,7 +112,8 @@
             (setq gravity-tau (send self :calc-gravity-torque))
 	    (if real
 		(setq ext-tau (v- real-tau gravity-tau))
-	      (setq ext-tau gravity-tau))))
+	      (setq ext-tau gravity-tau)))
+	(setq ext-tau real-tau))
       ;; Right arm
       (setq rarm-ext-force (send self :calc-external-force ext-tau :rarm rarm-link-index-list))
       (if rarm-ext-force

@@ -3,6 +3,7 @@
     <arg name="use_head_camera" default="true" />
     <arg name="use_chest_camera" default="true" />
     <arg name="use_voxel_grid" default="true" />
+    <arg name="node_start_delay" default="10.0" />  
 
     <include file="$(find sciurus17_moveit_config)/launch/demo.launch" if="$(arg use_rviz)"/>
     <include file="$(find sciurus17_moveit_config)/launch/sciurus17_planning.launch" unless="$(arg use_rviz)">
@@ -14,24 +15,41 @@
       <arg name="color_fps" value="30"/>
       <arg name="color_width" value="1280"/>
       <arg name="color_height" value="720"/>
+      <arg name="depth_fps" value="30"/>
+      <arg name="depth_width" value="1280"/>
+      <arg name="depth_height" value="720"/>
+      <arg name="infra_fps" value="30"/>
+      <arg name="infra_width" value="1280"/>
+      <arg name="infra_height" value="720"/>
+      <arg name="enable_infra1" value="true"/>
+      <arg name="enable_infra2" value="true"/>
+      <arg name="enable_color" value="true"/>
+      <arg name="enable_pointcloud" value="false"/>
+      <arg name="align_depth" value="true"/>
+      <arg name="enable_sync" value="false"/>
+      
       <rosparam>
 	/sciurus17/aligned_depth_to_color/image_raw/compressedDepth/png_level: 9
 	/sciurus17/camera/color/image_raw/compressed/png_level: 9
       </rosparam>
     </include>
 
-    <include ns="sciurus17" file="$(find sciurus17_vision)/launch/chest_camera.launch" if="$(arg use_chest_camera)"/>
+    <include ns="sciurus17" file="$(find sciurus17_vision)/launch/chest_camera.launch" if="$(arg use_chest_camera)" respawn="true"/>
 
     <include ns="sciurus17" file="$(find jsk_sciurus17_teleop)/launch/camera_voxel_grid.launch" if="$(arg use_voxel_grid)">
       <arg name="topic_ns" value="/sciurus17/camera/depth_registered/points"/>
       <arg name="leaf_size" value="0.003" />
       <arg name="depth_min" value="0.01" />
-      <arg name="depth_max" value="0.5" />
+      <arg name="depth_max" value="2.0" />
     </include>
 
-    <include file="$(find ros_tcp_endpoint)/launch/endpoint.launch"/>
     <!-- need to sleep -->
-    <node name="teleoperation_node_left" pkg="sciurus17eus" type="sciurus17-l-arm-teleop.l"/>
-    <node name="teleoperation_node_right" pkg="sciurus17eus" type="sciurus17-r-arm-teleop.l"/>
-    <node name="force_estimation_node" pkg="sciurus17eus" type="force-estimation-arms.l"/>
+    <include file="$(find ros_tcp_endpoint)/launch/endpoint.launch" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' " />
+
+    <node name="teleoperation_node_left" pkg="jsk_sciurus17_teleop" type="sciurus17-l-arm-teleop.l" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' " respawn="true"/>
+    <node name="teleoperation_node_right" pkg="jsk_sciurus17_teleop" type="sciurus17-r-arm-teleop.l" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' " respawn="true"/>
+    <node name="teleoperation_node_head_waist_command" pkg="jsk_sciurus17_teleop" type="sciurus17-head-waist-command-teleop.l" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' " respawn="true"/>
+    <!-- <node name="force_estimation_node" pkg="jsk_sciurus17_teleop" type="force-estimation-arms.l" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' " respawn="true"/> -->
+    <node name="rosbag_manager_node" pkg="jsk_sciurus17_teleop" type="rosbag_manager.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' " respawn="true"/>
+  
 </launch>
