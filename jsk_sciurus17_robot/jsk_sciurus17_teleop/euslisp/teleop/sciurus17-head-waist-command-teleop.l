@@ -19,7 +19,7 @@
     (send *sciurus17* :head :y :joint-angle (rad2deg (elt (car (rpy-angle (send pose :rot))) 0)))
     (send *sciurus17* :head :p :joint-angle (- (rad2deg (elt (car (rpy-angle (send pose :rot))) 1))))
     (update-robot-state)
-    (send *ri* :angle-vector-raw (send *sciurus17* :angle-vector) :fast :head-controller 0.0 :min-time 0.3)
+    (send *ri* :angle-vector (send *sciurus17* :angle-vector) :fast :head-controller 0.0 :min-time 0.3)
     )
   )
 
@@ -29,7 +29,7 @@
     (ros::ros-info "Received waist target pose: ~A" pose)
     (send *sciurus17* :torso :angle-vector (float-vector (rad2deg (elt (car (rpy-angle (send pose :rot))) 0))))
     (update-robot-state)
-    (send *ri* :angle-vector-raw (send *sciurus17* :angle-vector) :fast :torso-controller 0.0 :min-time 1.0)))
+    (send *ri* :angle-vector (send *sciurus17* :angle-vector) :fast :torso-controller 0.0 :min-time 1.0)))
 
 ;; commands
 
@@ -52,7 +52,13 @@
 ;; Object visualization
 (objects (list *sciurus17*))
 
-;; Set initial coordinates
+;; Initialize teleop pose
+(send *sciurus17* :reset-pose)
+(send *sciurus17* :angle-vector (send *ri* :actual-vector))
+(send *sciurus17* :l_arm_joint4 :joint-angle -136)
+(send *sciurus17* :r_arm_joint4 :joint-angle 136)
+(send *ri* :angle-vector (send *sciurus17* :angle-vector))
+(send *ri* :wait-interpolation)
 (send *irtviewer* :draw-objects)
 
 ;; Subscribe to all topics
@@ -68,7 +74,7 @@
     (ros::sleep)))
 
 (defun ik-viewer-loop-hz-debug ()
-  (ros::rate 10)  ;; 30 Hz loop
+  (ros::rate 10)  ;; 10 Hz loop
   (while (ros::ok)
     (let ((start-time (ros::time-now)))
       (ros::spin-once)

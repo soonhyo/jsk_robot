@@ -45,13 +45,27 @@
 
 ;; Callback for right hand
 (defun r-hand-target-value-callback (msg)
-  (setq *r-hand-target* (/ (- 1 (send msg :data)) 3))
+  (setq *r-hand-target* (/ (- 1 (send msg :data)) 1.25))
   (ros::ros-info "Received right hand target: ~A" *r-hand-target*)
-  (let ((mapped-value (* *r-hand-target* 30)))
+  (let ((mapped-value (* *r-hand-target* 10)))
     (ros::ros-info "Mapped right hand value: ~A" mapped-value)
     (send *sciurus17* :rhand :angle-vector (float-vector mapped-value)))
-  (update-robot-state)
-  (send *ri* :go-grasp :rarm :pos (/ (elt (send *sciurus17* :rhand :angle-vector) 0) 30) :effort 3 :wait nil))
+  ;; (update-robot-state)
+  (send *ri* :go-grasp :rarm :pos (/ (elt (send *sciurus17* :rhand :angle-vector) 0) 10) :effort 3 :wait nil))
+
+;; init pose
+(defun command-pose-callback (msg)
+  (let ((command-pose-data (send msg :data)))
+    (cond
+     ((string= command-pose-data "pose/init_pose")
+      (progn
+	(ros::unsubscribe "/right_wrist_target_pose")
+	(unix:sleep 6)
+	(send *sciurus17* :reset-pose)
+	(setq *r-arm-target-coords* (send *sciurus17* :rarm :end-coords))
+	(ros::subscribe "/right_wrist_target_pose" geometry_msgs::PoseStamped #'r-arm-target-pose-callback)
+	;; (update-robot-state)
+	)))))
 
 ;; Helper function
 (defun update-robot-state ()
@@ -63,9 +77,6 @@
 
 ;; Initialize teleop pose for right arm
 (send *sciurus17* :angle-vector (send *ri* :actual-vector))
-(send *sciurus17* :r_arm_joint4 :joint-angle 136)
-(send *ri* :angle-vector (send *sciurus17* :angle-vector))
-(send *ri* :wait-interpolation)
 (setq *r-arm-target-coords* (send *sciurus17* :rarm :end-coords))
 (send *irtviewer* :draw-objects)
 
@@ -74,6 +85,10 @@
 ;; Subscribe to right arm topics
 (ros::subscribe "/right_wrist_target_pose" geometry_msgs::PoseStamped #'r-arm-target-pose-callback)
 (ros::subscribe "/right_hand" std_msgs::Float32 #'r-hand-target-value-callback)
+(ros::subscribe "/vr_command" std_msgs::String #'command-pose-callback)
+
+;; (send *ri* :update-robot-state-alone)
+;; (send *ri* :update-robot-state)
 
 ;; Main loop
 (defun ik-viewer-loop ()
@@ -83,7 +98,7 @@
     (ros::sleep)))
 
 (defun ik-viewer-loop-hz-debug ()
-  (ros::rate 30)  ;; 200 Hz loop
+  (ros::rate 50)  ;; 50 Hz loop
   (while (ros::ok)
     (let ((start-time (ros::time-now)))
       (ros::spin-once)
