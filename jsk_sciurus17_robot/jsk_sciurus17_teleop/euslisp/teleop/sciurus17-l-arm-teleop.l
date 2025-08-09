@@ -15,6 +15,9 @@
 ;; Callback for left arm
 (defun l-arm-target-pose-callback (msg)
   (let ((pose (ros::tf-pose->coords (send msg :pose))))
+    (send *sciurus17* :angle-vector (send *ri* :actual-vector))
+    (update-robot-state)
+
     (setq *l-arm-target-coords* pose)
     (ros::ros-info "Received left wrist target pose: ~A" pose)
     (setq *ik-success-l*
@@ -50,7 +53,7 @@
   (let ((mapped-value (* *l-hand-target* 10)))
     (ros::ros-info "Mapped left hand value: ~A" (- mapped-value))
     (send *sciurus17* :lhand :angle-vector (float-vector (- mapped-value))))
-  ;; (update-robot-state)
+  (update-robot-state)
   (send *ri* :go-grasp :larm :pos (/ (elt (send *sciurus17* :lhand :angle-vector) 0) 10) :effort 3 :wait nil))
 
 ;; init pose
@@ -64,9 +67,8 @@
 	  (send *sciurus17* :reset-pose)
 	  (setq *l-arm-target-coords* (send *sciurus17* :larm :end-coords))
 	  (ros::subscribe "/left_wrist_target_pose" geometry_msgs::PoseStamped #'l-arm-target-pose-callback)
-
-          ;; (update-robot-state)
-          )))))
+    (update-robot-state)
+    )))))
 
 ;; Helper function
 (defun update-robot-state ()
@@ -86,7 +88,7 @@
 (ros::subscribe "/left_hand" std_msgs::Float32 #'l-hand-target-value-callback)
 (ros::subscribe "/vr_command" std_msgs::String #'command-pose-callback)
 
-;; (send *ri* :update-robot-state-alone)
+(send *ri* :update-robot-state-alone)
 ;; (send *ri* :update-robot-state)
 
 ;; Main loop

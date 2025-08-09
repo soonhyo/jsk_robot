@@ -15,6 +15,9 @@
 ;; Callback for right arm
 (defun r-arm-target-pose-callback (msg)
   (let ((pose (ros::tf-pose->coords (send msg :pose))))
+    (send *sciurus17* :angle-vector (send *ri* :actual-vector))
+    (update-robot-state)
+
     (setq *r-arm-target-coords* pose)
     (ros::ros-info "Received right wrist target pose: ~A" pose)
     (setq *ik-success-r*
@@ -50,7 +53,7 @@
   (let ((mapped-value (* *r-hand-target* 10)))
     (ros::ros-info "Mapped right hand value: ~A" mapped-value)
     (send *sciurus17* :rhand :angle-vector (float-vector mapped-value)))
-  ;; (update-robot-state)
+  (update-robot-state)
   (send *ri* :go-grasp :rarm :pos (/ (elt (send *sciurus17* :rhand :angle-vector) 0) 10) :effort 3 :wait nil))
 
 ;; init pose
@@ -64,7 +67,7 @@
 	(send *sciurus17* :reset-pose)
 	(setq *r-arm-target-coords* (send *sciurus17* :rarm :end-coords))
 	(ros::subscribe "/right_wrist_target_pose" geometry_msgs::PoseStamped #'r-arm-target-pose-callback)
-	;; (update-robot-state)
+	(update-robot-state)
 	)))))
 
 ;; Helper function
@@ -80,14 +83,12 @@
 (setq *r-arm-target-coords* (send *sciurus17* :rarm :end-coords))
 (send *irtviewer* :draw-objects)
 
-;; (send-all (send *sciurus17* :links) :analysis-level :coords)
-;; (send-all (send *ri* :robot :links) :analysis-level :coords)
 ;; Subscribe to right arm topics
 (ros::subscribe "/right_wrist_target_pose" geometry_msgs::PoseStamped #'r-arm-target-pose-callback)
 (ros::subscribe "/right_hand" std_msgs::Float32 #'r-hand-target-value-callback)
 (ros::subscribe "/vr_command" std_msgs::String #'command-pose-callback)
 
-;; (send *ri* :update-robot-state-alone)
+(send *ri* :update-robot-state-alone)
 ;; (send *ri* :update-robot-state)
 
 ;; Main loop
