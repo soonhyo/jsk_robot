@@ -79,7 +79,7 @@
       (if (eq FM-vec nil)
           (return-from :calc-external-force nil)
           (progn
-            (setq FM-vec (scale -1 FM-vec))
+            (setq FM-vec (scale -0.01 FM-vec))
             (if debug
                 (format t "FM-vec for ~A: ~A~%" limb FM-vec))
             FM-vec))))

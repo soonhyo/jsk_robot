@@ -16,7 +16,7 @@
 (defun r-arm-target-pose-callback (msg)
   (let ((pose (ros::tf-pose->coords (send msg :pose))))
     (send *sciurus17* :angle-vector (send *ri* :actual-vector))
-    (update-robot-state)
+    ;; (update-robot-state)
 
     (setq *r-arm-target-coords* pose)
     (ros::ros-info "Received right wrist target pose: ~A" pose)
@@ -37,7 +37,7 @@
       (format t "angle vector time :~%")
       (bench
     ;(send *ri* :angle-vector-raw (send *sciurus17* :angle-vector) :fast :rarm-controller 0.0 :min-time 0.1)
-       (send *ri* :angle-vector (send *sciurus17* :angle-vector) 50 :rarm-controller 0.0 :min-time 0.05 :spin-once nil)
+       (send *ri* :angle-vector (send *sciurus17* :angle-vector) 300 :rarm-controller 0.0 :min-time 0.5 :spin-once nil)
     ))
     ;; (progn
     ;;   (format t "irtviewer time :~%")
@@ -53,7 +53,7 @@
   (let ((mapped-value (* *r-hand-target* 10)))
     (ros::ros-info "Mapped right hand value: ~A" mapped-value)
     (send *sciurus17* :rhand :angle-vector (float-vector mapped-value)))
-  (update-robot-state)
+  ;; (update-robot-state)
   (send *ri* :go-grasp :rarm :pos (/ (elt (send *sciurus17* :rhand :angle-vector) 0) 10) :effort 3 :wait nil))
 
 ;; init pose
@@ -67,7 +67,7 @@
 	(send *sciurus17* :reset-pose)
 	(setq *r-arm-target-coords* (send *sciurus17* :rarm :end-coords))
 	(ros::subscribe "/right_wrist_target_pose" geometry_msgs::PoseStamped #'r-arm-target-pose-callback)
-	(update-robot-state)
+	;; (update-robot-state)
 	)))))
 
 ;; Helper function

@@ -1,7 +1,9 @@
 <launch>
     <arg name="use_rviz" default="true" />
     <arg name="use_head_camera" default="true" />
-    <arg name="use_chest_camera" default="true" />
+    <arg name="use_chest_camera" default="false" />
+    <arg name="use_hand_camera" default="true" />
+    <arg name="use_bottom_camera" default="true" />
     <arg name="use_voxel_grid" default="true" />
     <arg name="node_start_delay" default="10.0" />  
 
@@ -13,14 +15,14 @@
 
     <include ns="sciurus17" file="$(find sciurus17_vision)/launch/realsense.launch" if="$(arg use_head_camera)">
       <arg name="color_fps" value="30"/>
-      <arg name="color_width" value="1280"/>
-      <arg name="color_height" value="720"/>
+      <arg name="color_width" value="848"/>
+      <arg name="color_height" value="480"/>
       <arg name="depth_fps" value="30"/>
-      <arg name="depth_width" value="1280"/>
-      <arg name="depth_height" value="720"/>
+      <arg name="depth_width" value="848"/>
+      <arg name="depth_height" value="480"/>
       <arg name="infra_fps" value="30"/>
-      <arg name="infra_width" value="1280"/>
-      <arg name="infra_height" value="720"/>
+      <arg name="infra_width" value="848"/>
+      <arg name="infra_height" value="480"/>
       <arg name="enable_infra1" value="true"/>
       <arg name="enable_infra2" value="true"/>
       <arg name="enable_color" value="true"/>
@@ -34,8 +36,6 @@
       </rosparam>
     </include>
 
-    <include ns="sciurus17" file="$(find sciurus17_vision)/launch/chest_camera.launch" if="$(arg use_chest_camera)" respawn="true"/>
-
     <include ns="sciurus17" file="$(find jsk_sciurus17_teleop)/launch/camera_voxel_grid.launch" if="$(arg use_voxel_grid)">
       <arg name="topic_ns" value="/sciurus17/camera/depth_registered/points"/>
       <arg name="leaf_size" value="0.003" />
@@ -43,13 +43,20 @@
       <arg name="depth_max" value="2.0" />
     </include>
 
+    <include ns="sciurus17" file="$(find sciurus17_vision)/launch/chest_camera.launch" if="$(arg use_chest_camera)" respawn="true"/>
+
+    <include ns="sciurus17" file="$(find sciurus17_vision)/launch/hand_camera.launch" if="$(arg use_hand_camera)" respawn="true"/>
+
+    <include ns="sciurus17" file="$(find sciurus17_vision)/launch/bottom_camera.launch" if="$(arg use_bottom_camera)" respawn="true"/>
+
     <!-- need to sleep -->
     <include file="$(find ros_tcp_endpoint)/launch/endpoint.launch" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' " />
 
     <node name="teleoperation_node_left" pkg="jsk_sciurus17_teleop" type="sciurus17-l-arm-teleop.l" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' " respawn="true"/>
     <node name="teleoperation_node_right" pkg="jsk_sciurus17_teleop" type="sciurus17-r-arm-teleop.l" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' " respawn="true"/>
     <node name="teleoperation_node_head_waist_command" pkg="jsk_sciurus17_teleop" type="sciurus17-head-waist-command-teleop.l" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' " respawn="true"/>
-    <!-- <node name="force_estimation_node" pkg="jsk_sciurus17_teleop" type="force-estimation-arms.l" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' " respawn="true"/> -->
+    <node name="force_estimation_node" pkg="jsk_sciurus17_teleop" type="force-estimation-arms.l" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' " respawn="true"/>
     <node name="rosbag_manager_node" pkg="jsk_sciurus17_teleop" type="rosbag_manager.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' " respawn="true"/>
-  
+
+    
 </launch>

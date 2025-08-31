@@ -74,7 +74,7 @@
     (ros::sleep)))
 
 (defun ik-viewer-loop-hz-debug ()
-  (ros::rate 10)  ;; 10 Hz loop
+  (ros::rate 50)  ;; 10 Hz loop
   (while (ros::ok)
     (let ((start-time (ros::time-now)))
       (ros::spin-once)
