@@ -2,6 +2,8 @@
 (require :sciurus17 "package://sciurus17eus/sciurus17-interface.l")
 (ros::load-ros-package "geometry_msgs")
 (ros::load-ros-package "std_msgs")
+(ros::load-ros-package "actionlib_msgs")
+(ros::load-ros-package "dynamixel_scissors")
 
 ;; Initialize Sciurus17 (Right arm only)
 (unless (boundp '*sciurus17*) (sciurus17-init :safe nil :moveit nil))
@@ -11,6 +13,10 @@
 (defvar *r-arm-target-coords* (make-coords))  ;; Right arm target coordinates
 (defvar *r-hand-target* 0.0)                  ;; Right hand target value
 (defvar *ik-success-r* nil)                   ;; Right arm IK success flag
+
+;; Global variables for scissor control
+(defvar *scissor-action-client* nil)
+(defvar *scissor-state* :closed)
 
 ;; Callback for right arm
 (defun r-arm-target-pose-callback (msg)
@@ -60,13 +66,13 @@
 (defun command-pose-callback (msg)
   (let ((command-pose-data (send msg :data)))
     (cond
-     ((string= command-pose-data "pose/init_pose")
+     ((string= command-pose-data "button/button_two")
       (progn
-	(ros::unsubscribe "/right_wrist_target_pose")
+	(ros::unsubscribe "/oculus/right_controller/pose_stamped")
 	(unix:sleep 6)
 	(send *sciurus17* :reset-pose)
 	(setq *r-arm-target-coords* (send *sciurus17* :rarm :end-coords))
-	(ros::subscribe "/right_wrist_target_pose" geometry_msgs::PoseStamped #'r-arm-target-pose-callback)
+	(ros::subscribe "/oculus/right_controller/pose_stamped" geometry_msgs::PoseStamped #'r-arm-target-pose-callback)
 	(update-robot-state)
 	)))))
 
@@ -84,9 +90,9 @@
 (send *irtviewer* :draw-objects)
 
 ;; Subscribe to right arm topics
-(ros::subscribe "/right_wrist_target_pose" geometry_msgs::PoseStamped #'r-arm-target-pose-callback)
-(ros::subscribe "/right_hand" std_msgs::Float32 #'r-hand-target-value-callback)
-(ros::subscribe "/vr_command" std_msgs::String #'command-pose-callback)
+(ros::subscribe "/oculus/right_controller/pose_stamped" geometry_msgs::PoseStamped #'r-arm-target-pose-callback)
+(ros::subscribe "/oculus/right_controller/gripper" std_msgs::Float32 #'r-hand-target-value-callback)
+(ros::subscribe "/oculus/right_controller/joy" std_msgs::String #'command-pose-callback)
 
 (send *ri* :update-robot-state-alone)
 ;; (send *ri* :update-robot-state)

@@ -2,6 +2,8 @@
 (require :sciurus17 "package://sciurus17eus/sciurus17-interface.l")
 (ros::load-ros-package "geometry_msgs")
 (ros::load-ros-package "std_msgs")
+(ros::load-ros-package "actionlib_msgs")
+(ros::load-ros-package "dynamixel_scissors")
 
 ;; Initialize Sciurus17 (Left arm only)
 (unless (boundp '*sciurus17*) (sciurus17-init :safe nil :moveit nil))
@@ -60,13 +62,19 @@
 (defun command-pose-callback (msg)
   (let ((command-pose-data (send msg :data)))
     (cond
-     ((string= command-pose-data "pose/init_pose")
+     ((string= command-pose-data "button/button_one")
+      (progn
+	(ros::ros-info "Button one pressed - toggling scissor")
+	(ros::publish "/scissor_control/goal" (instance dynamixel_scissors::ScissorControlActionGoal :init 
+	  :goal (instance dynamixel_scissors::ScissorControlGoal :init :command "toggle" :duration 1.5)))
+	))
+     ((string= command-pose-data "button/button_two")
         (progn
-	  (ros::unsubscribe "/left_wrist_target_pose")
+	  (ros::unsubscribe "/oculus/left_controller/pose_stamped")
 	  (unix:sleep 6)
 	  (send *sciurus17* :reset-pose)
 	  (setq *l-arm-target-coords* (send *sciurus17* :larm :end-coords))
-	  (ros::subscribe "/left_wrist_target_pose" geometry_msgs::PoseStamped #'l-arm-target-pose-callback)
+	  (ros::subscribe "/oculus/left_controller/pose_stamped" geometry_msgs::PoseStamped #'l-arm-target-pose-callback)
     (update-robot-state)
     )))))
 
@@ -83,10 +91,13 @@
 (setq *l-arm-target-coords* (send *sciurus17* :larm :end-coords))
 (send *irtviewer* :draw-objects)
 
+;; Advertise scissor control topic
+(ros::advertise "/scissor_control/goal" dynamixel_scissors::ScissorControlActionGoal 1)
+
 ;; Subscribe to left arm topics
-(ros::subscribe "/left_wrist_target_pose" geometry_msgs::PoseStamped #'l-arm-target-pose-callback)
-(ros::subscribe "/left_hand" std_msgs::Float32 #'l-hand-target-value-callback)
-(ros::subscribe "/vr_command" std_msgs::String #'command-pose-callback)
+(ros::subscribe "/oculus/left_controller/pose_stamped" geometry_msgs::PoseStamped #'l-arm-target-pose-callback)
+(ros::subscribe "/oculus/left_controller/gripper" std_msgs::Float32 #'l-hand-target-value-callback)
+(ros::subscribe "/oculus/left_controller/joy" std_msgs::String #'command-pose-callback)
 
 (send *ri* :update-robot-state-alone)
 ;; (send *ri* :update-robot-state)

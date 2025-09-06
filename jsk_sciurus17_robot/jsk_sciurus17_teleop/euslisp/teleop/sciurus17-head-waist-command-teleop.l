@@ -38,7 +38,7 @@
 (defun command-pose-callback (msg)
   (let ((command-pose-data (send msg :data)))
     (cond
-     ((string= command-pose-data "pose/init_pose")
+     ((string= command-pose-data "button/button_two")
         (progn
           (send *sciurus17* :reset-pose)
           (update-robot-state)
@@ -62,9 +62,9 @@
 (send *irtviewer* :draw-objects)
 
 ;; Subscribe to all topics
-(ros::subscribe "/head_target_pose" geometry_msgs::PoseStamped #'head-target-pose-callback)
-(ros::subscribe "/waist_target_pose" geometry_msgs::PoseStamped #'torso-target-pose-callback)
-(ros::subscribe "/vr_command" std_msgs::String #'command-pose-callback)
+(ros::subscribe "/oculus/head/pose_stamped" geometry_msgs::PoseStamped #'head-target-pose-callback)
+(ros::subscribe "/oculus/waist/pose_stamped" geometry_msgs::PoseStamped #'torso-target-pose-callback)
+(ros::subscribe "/oculus/right_controller/joy" std_msgs::String #'command-pose-callback)
 
 ;; Main loop
 (defun ik-viewer-loop ()

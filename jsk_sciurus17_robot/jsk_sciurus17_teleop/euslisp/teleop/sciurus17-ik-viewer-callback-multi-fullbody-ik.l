@@ -53,7 +53,7 @@
 
 (defun command-pose-callback (msg)
   (let ((command-pose-data (send msg :data)))
-    (if (string= command-pose-data "init_pose")
+    (if (string= command-pose-data "button/button_two")
         (progn
           (send *sciurus17* :reset-pose)
           (send *ri* :angle-vector (send *sciurus17* :angle-vector) 5000)
@@ -140,13 +140,13 @@
 (send *irtviewer* :draw-objects)
 
 ;; Subscribe to all topics
-(ros::subscribe "/right_wrist_target_pose" geometry_msgs::PoseStamped #'r-arm-target-pose-callback)
-(ros::subscribe "/left_wrist_target_pose" geometry_msgs::PoseStamped #'l-arm-target-pose-callback)
-(ros::subscribe "/head_target_pose" geometry_msgs::PoseStamped #'head-target-pose-callback)
-(ros::subscribe "/waist_target_pose" geometry_msgs::PoseStamped #'torso-target-pose-callback)
-(ros::subscribe "/right_hand" std_msgs::Float32 #'r-hand-target-value-callback)
-(ros::subscribe "/left_hand" std_msgs::Float32 #'l-hand-target-value-callback)
-(ros::subscribe "/command_pose" std_msgs::String #'command-pose-callback)
+(ros::subscribe "/oculus/right_controller/pose_stamped" geometry_msgs::PoseStamped #'r-arm-target-pose-callback)
+(ros::subscribe "/oculus/left_controller/pose_stamped" geometry_msgs::PoseStamped #'l-arm-target-pose-callback)
+(ros::subscribe "/oculus/head/pose_stamped" geometry_msgs::PoseStamped #'head-target-pose-callback)
+(ros::subscribe "/oculus/waist/pose_stamped" geometry_msgs::PoseStamped #'torso-target-pose-callback)
+(ros::subscribe "/oculus/right_controller/gripper" std_msgs::Float32 #'r-hand-target-value-callback)
+(ros::subscribe "/oculus/left_controller/gripper" std_msgs::Float32 #'l-hand-target-value-callback)
+(ros::subscribe "/oculus/right_controller/joy" std_msgs::String #'command-pose-callback)
 
 ;; Main loop
 (defun ik-viewer-loop ()
