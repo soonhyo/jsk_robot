@@ -14,7 +14,7 @@
 
   <build_depend>collada_urdf</build_depend>
   <build_depend>euscollada</build_depend>
-  <build_depend>sciurus17_moveit_config</build_depend>
+  <build_depend>sciurus17</build_depend>
   <build_depend>sciurus17_description</build_depend>
   <build_depend>pr2eus</build_depend>
   <build_depend>pr2eus_moveit</build_depend>
@@ -23,7 +23,7 @@
 
   <build_export_depend>collada_urdf</build_export_depend>
   <build_export_depend>euscollada</build_export_depend>
-  <build_export_depend>sciurus17_moveit_config</build_export_depend>
+  <build_export_depend>sciurus17</build_export_depend>
   <build_export_depend>sciurus17_description</build_export_depend>
   <build_export_depend>pr2eus</build_export_depend>
   <build_export_depend>pr2eus_moveit</build_export_depend>
