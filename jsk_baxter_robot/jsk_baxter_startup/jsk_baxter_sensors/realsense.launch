@@ -28,18 +28,21 @@
     <arg name="depth_fps" value="$(arg depth_fps)" />
   </include>
 
-  <!-- subscribing /$(arg realsense_camera_ns)/depth/image_rect_raw/compressedDepth causes serious frequency drop. -->
-  <node name="depth_compress_republish" pkg="image_transport"
-        type="republish" args="raw in:=$(arg realsense_camera_ns)/depth/image_rect_raw
-                               compressedDepth out:=$(arg realsense_camera_ns)/depth/compressed/image_rect_raw" />
-  <node name="depth_camera_info_relay" pkg="topic_tools"
-        type="relay" args="$(arg realsense_camera_ns)/depth/camera_info
-                           $(arg realsense_camera_ns)/depth/compressed/camera_info" />
-  <!-- subscribing /$(arg realsense_camera_ns)/aligned_depth_to_color/image_rect_raw/compressedDepth causes serious frequency drop. -->
-  <node name="aligned_depth_to_color_compress_republish" pkg="image_transport"
-        type="republish" args="raw in:=$(arg realsense_camera_ns)/aligned_depth_to_color/image_raw
-                               compressedDepth out:=$(arg realsense_camera_ns)/aligned_depth_to_color/compressed/image_raw" />
-  <node name="aligned_depth_to_color_camera_info_relay" pkg="topic_tools"
-        type="relay" args="$(arg realsense_camera_ns)/aligned_depth_to_color/camera_info
-                           $(arg realsense_camera_ns)/aligned_depth_to_color/compressed/camera_info" />
+  <!-- Wrap nodes in namespace to avoid conflicts when launching multiple cameras -->
+  <group ns="$(arg realsense_camera_ns)">
+    <!-- subscribing /$(arg realsense_camera_ns)/depth/image_rect_raw/compressedDepth causes serious frequency drop. -->
+    <node name="depth_compress_republish" pkg="image_transport"
+          type="republish" args="raw in:=$(arg realsense_camera_ns)/depth/image_rect_raw
+                                 compressedDepth out:=$(arg realsense_camera_ns)/depth/compressed/image_rect_raw" />
+    <node name="depth_camera_info_relay" pkg="topic_tools"
+          type="relay" args="$(arg realsense_camera_ns)/depth/camera_info
+                             $(arg realsense_camera_ns)/depth/compressed/camera_info" />
+    <!-- subscribing /$(arg realsense_camera_ns)/aligned_depth_to_color/image_rect_raw/compressedDepth causes serious frequency drop. -->
+    <node name="aligned_depth_to_color_compress_republish" pkg="image_transport"
+          type="republish" args="raw in:=$(arg realsense_camera_ns)/aligned_depth_to_color/image_raw
+                                 compressedDepth out:=$(arg realsense_camera_ns)/aligned_depth_to_color/compressed/image_raw" />
+    <node name="aligned_depth_to_color_camera_info_relay" pkg="topic_tools"
+          type="relay" args="$(arg realsense_camera_ns)/aligned_depth_to_color/camera_info
+                             $(arg realsense_camera_ns)/aligned_depth_to_color/compressed/camera_info" />
+  </group>
 </launch>

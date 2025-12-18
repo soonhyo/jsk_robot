@@ -1,8 +1,8 @@
 <launch>
   <arg name="moveit" default="true" />
-  <arg name="launch_realsense_head" default="false"/>
+  <arg name="launch_realsense_head" default="true"/>
   <arg name="launch_realsense_torso" default="true"/>
-  <arg name="launch_realsense_base" default="false"/>
+  <arg name="launch_realsense_base" default="true"/>
   <arg name="launch_spherical_kodak" default="false" />
   <arg name="launch_spherical_stereo" default="false" />
   <arg name="arm_interpolation" default="minjerk" />
